@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 578.62 578.62" width="512" height="512">
+  <!-- Square background -->
+  <rect width="578.62" height="578.62" fill="#ffffff"/>
+  <g transform="translate(0, 95.13)">
+    <!-- Central Rectangle (Beam) -->
+    <rect x="0" y="143.12" width="578.62" height="102.11" fill="#1C3E68"/>
+    <!-- Top Triangle (Left) -->
+    <polygon points="0,0 289.31,118.6 0,118.6" fill="#4D9C6A"/>
+    <!-- Bottom Triangle (Right) -->
+    <polygon points="578.62,388.36 289.31,269.75 578.62,269.75" fill="#4B9D68"/>
+  </g>
+</svg>

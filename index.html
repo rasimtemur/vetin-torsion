@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-72HVMM1696"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-72HVMM1696');
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vetin : Burulma</title>
+    <link rel="stylesheet" href="./style.css">
+    <link id="pwa-manifest" rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    <script src="./translations.js"></script>
+    <!-- Three.js for 3D visualization -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+
+<body>
+
+    <!-- SOL PANEL (KART) -->
+    <div id="left-panel">
+
+        <!-- LOGO -->
+        <div class="logo-container">
+            <a href="../../">
+                <img src="./logo.svg" alt="vetin Logo" class="panel-logo">
+            </a>
+        </div>
+
+
+        <div class="panel-content">
+
+        <!-- BÖLÜM 5: GÖRSELLEŞTİRME -->
+        <div class="panel-section">
+            <h3 data-i18n="visualization">GÖRSEL AYARLAR</h3>
+            <div class="input-row single-col">
+                <div class="input-group">
+                    <span class="text-label" data-i18n="gridSpacing">Izgara Aralığı</span>
+                    <input type="number" id="tbGridSize" value="10" min="1" step="1">
+                    <span class="unit-input">mm</span>
+                </div>
+            </div>
+
+            <div class="toggle-row">
+                <span class="toggle-label" data-i18n="showDimensions">Boyutlandırma</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="cbDimensions" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-row">
+                <span class="toggle-label" data-i18n="showGeometricCenter">Geometrik Merkez</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="cbGeometricCenter" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-row">
+                <span class="toggle-label" data-i18n="showAxes">Eksenler</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="cbAxes" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-row" id="stressRow">
+                <span class="toggle-label" data-i18n="showStress">Gerilme Dağılımı</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="cbStress" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <!-- Yalnızca dikdörtgen kesitte anlamlı: dairesel kesitin köşegeni yok.
+                 Üç etiket tek satıra sığmadığı için seçim alt satıra alınır. -->
+            <div class="toggle-row toggle-row-stacked" id="stressModeRow" style="display: none;">
+                <span class="toggle-label" data-i18n="stressDiagramPath">Diyagram Yeri</span>
+                <div class="seg-group">
+                    <button type="button" class="seg-btn active" data-stress-mode="axes"
+                            data-i18n="stressOnAxes">Eksenler</button>
+                    <button type="button" class="seg-btn" data-stress-mode="diagonal"
+                            data-i18n="stressOnDiagonal">Köşegen</button>
+                    <button type="button" class="seg-btn" data-stress-mode="all"
+                            data-i18n="stressOnBoth">Tümü</button>
+                </div>
+            </div>
+
+            <div class="toggle-row" id="forceVectorRow">
+                <span class="toggle-label">Burulma Momenti</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="cbForceVector" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-row">
+                <span class="toggle-label" data-i18n="showPartBorders">Eleman Sınırları</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="cbPartBorders">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-row">
+                <span class="toggle-label" data-i18n="show3DView">3B Görünüm</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="cb3DView">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- BÖLÜM 6: 3D AYARLARI -->
+        <div class="panel-section" id="section3DSettings" style="display: none;">
+            <h3 data-i18n="settings3D">3B AYARLAR</h3>
+            <div class="input-row single-col">
+                <div class="input-group">
+                    <span class="text-label" data-i18n="barLength">Çubuk Boyu</span>
+                    <input type="number" id="tbBarLength" value="500" min="100" max="5000">
+                    <span class="unit-input">mm</span>
+                </div>
+            </div>
+            <div class="input-row single-col">
+                <div class="input-group">
+                    <span class="text-label">Opaklık</span>
+                    <input type="range" id="tbOpacity" min="10" max="100" value="90">
+                    <span id="lblOpacityVal" class="unit-input">90%</span>
+                </div>
+            </div>
+            <div class="toggle-row">
+                <span class="toggle-label" data-i18n="showWireframe">Tel Kafes</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="cb3DWireframe">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="toggle-row">
+                <span class="toggle-label" data-i18n="showEdges">Kenarlar</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="cb3DEdges" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-row">
+                <span class="toggle-label">Enine Çizgiler</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="cb3DTransverse" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-row">
+                <span class="toggle-label">Şekil Değiştirme</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="cb3DDeformed" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="input-row single-col">
+                <div class="input-group">
+                    <span class="text-label">Büyütme</span>
+                    <input type="number" id="tbDeformScale" value="0" min="0" step="100">
+                    <span class="unit-input" id="lbl3DDeformScale">× oto</span>
+                </div>
+            </div>
+            <div class="input-row single-col">
+                <div class="input-group readonly">
+                    <span class="text-label">Uç dönmesi</span>
+                    <span class="value-readonly" id="val3DTwist">0.0000</span>
+                    <span class="unit-input">°</span>
+                </div>
+            </div>
+
+        </div>
+
+        </div>
+
+        <!-- SOL PANEL FOOTER -->
+        <div class="left-panel-footer">
+            <div class="language-switcher" style="position: relative;">
+                <div style="position: relative; display: inline-block;">
+                    <button id="settings-menu-toggle-left" title="Ayarlar">
+                        <svg viewBox="0 0 24 24" style="width: 20px; height: 20px;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <line x1="4" y1="7" x2="20" y2="7"></line>
+                            <line x1="4" y1="12" x2="20" y2="12"></line>
+                            <line x1="4" y1="17" x2="20" y2="17"></line>
+                        </svg>
+                    </button>
+                    <div id="settingsMenuLeft" class="settings-menu-left">
+                        <!-- Görünüm - alt menülü -->
+                        <div class="settings-menu-item has-submenu" id="settings-theme-left">
+                            <svg viewBox="0 0 24 24" style="width: 16px; height: 16px;">
+                                <path class="icon-moon" d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z" fill="currentColor"></path>
+                                <path class="icon-sun" d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z" fill="currentColor"></path>
+                                <path class="icon-blueprint" d="M17,14H15V12H17M17,11H15V9H17M17,8H15V6H17M13,14H11V12H13M13,11H11V9H13M13,8H11V6H13M9,14H7V12H9M9,11H7V9H9M9,8H7V6H9M20,2H4C2.89,2 2,2.89 2,4V16C2,17.11 2.89,18 4,18H20C21.11,18 22,17.11 22,16V4C22,2.89 21.11,2 20,2M20,16H4V4H20V16M22,20H2V22H22V20Z" fill="currentColor"></path>
+                            </svg>
+                            <span data-i18n="appMenuView">Görünüm</span>
+                            <svg class="submenu-arrow" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto;">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                            <div class="settings-submenu">
+                                <button class="settings-submenu-item" id="submenu-theme-light" data-theme="light">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z"/></svg>
+                                    <span data-i18n="themeLight">Aydınlık</span>
+                                </button>
+                                <button class="settings-submenu-item" id="submenu-theme-dark" data-theme="dark">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
+                                    <span data-i18n="themeDark">Karanlık</span>
+                                </button>
+                                <button class="settings-submenu-item" id="submenu-theme-blueprint" data-theme="blueprint">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M17,14H15V12H17M17,11H15V9H17M17,8H15V6H17M13,14H11V12H13M13,11H11V9H13M13,8H11V6H13M9,14H7V12H9M9,11H7V9H9M9,8H7V6H9M20,2H4C2.89,2 2,2.89 2,4V16C2,17.11 2.89,18 4,18H20C21.11,18 22,17.11 22,16V4C22,2.89 21.11,2 20,2M20,16H4V4H20V16M22,20H2V22H22V20Z"/></svg>
+                                    <span data-i18n="themeBlueprint">Ozalit</span>
+                                </button>
+                            </div>
+                        </div>
+                        <button id="settings-about-left" class="settings-menu-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                            <span data-i18n="appMenuAbout">Hakkında</span>
+                        </button>
+                    </div>
+                </div>
+                <button class="active" data-lang="tr">TR</button>
+                <button data-lang="en">EN</button>
+                <button data-lang="de">DE</button>
+                <button data-lang="zh">CN</button>
+                <button id="btnMoreLanguages" data-i18n-title="moreLangsBtn" title="Daha Fazla Dil">+</button>
+            </div>
+            <a href="http://www.iuc.edu.tr" target="_blank">
+                <img src="./IUC.svg" alt="IUC" class="footer-logo-mini">
+            </a>
+            <div class="footer-text-mini">
+                <p><strong data-bending-title="1">vetin : Burulma</strong></p>
+                <p>&copy; <span class="left-panel-year"></span> · <a href="https://www.rasimtemur.com" target="_blank" rel="noopener noreferrer">Rasim Temür</a> · <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer" data-i18n="mitLicense">MIT Lisansı</a> · <a href="https://github.com/rasimtemur/vetin-momentofinertia" target="_blank" rel="noopener noreferrer" class="github-link"><svg viewBox="0 0 24 24" style="width: 12px; height: 12px; fill: currentColor; margin-right: 2px;"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>GitHub</a></p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ORTA ALAN (Resizable) -->
+    <div id="middle-area">
+        <!-- ORTA PANEL -->
+    <div id="center-panel">
+        <div id="canvas-content-wrapper">
+            <span class="panel-title" data-i18n="sectionDrawing">KESİT ÇİZİMİ</span>
+
+            <!-- Çizim Araçları Paneli -->
+            <div class="drawing-tools-panel">
+                <!-- Kesit Araçları -->
+                <span class="drawing-tools-title" data-i18n="sectionPanelTitle">Kesit</span>
+                <button class="tool-btn-vertical" id="btnCircle" data-i18n-title="toolCircle" title="Dolu Daire Kesit">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+                <button class="tool-btn-vertical" id="btnRing" title="Halka Kesit (3 tık: merkez, bir çap, diğer çap)">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+                <button class="tool-btn-vertical" id="btnRect" title="Dikdörtgen / Kare Kesit (köşeden köşeye sürükleyin, Shift: kare)">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <rect x="3" y="6" width="18" height="12" fill="none" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+
+                <!-- Düzenleme Araçları -->
+                <span class="drawing-tools-title" data-i18n="editPanelTitle">Düzenle</span>
+                <button class="tool-btn-vertical" id="btnEditMode" data-i18n-title="toolEdit" title="Düzenle">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/>
+                    </svg>
+                </button>
+                <button class="tool-btn-vertical" id="btnPan" data-i18n-title="toolPan" title="Taşı">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z" fill="currentColor"/>
+                    </svg>
+                </button>
+
+                <!-- Dosya Bölümü -->
+                <span class="drawing-tools-title" data-i18n="filePanelTitle">Dosya</span>
+                <button class="tool-btn-vertical" id="btnSideOpen" data-i18n-title="openProject" title="Dosya Aç">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z" fill="currentColor"/>
+                    </svg>
+                </button>
+                <button class="tool-btn-vertical" id="btnSideSave" data-i18n-title="saveProject" title="Dosyayı Kaydet">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" fill="currentColor"/>
+                    </svg>
+                </button>
+                <button class="tool-btn-vertical" id="btnExportSVG" data-i18n-title="saveSVG" title="SVG Olarak Kaydet">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Canvas Kontrolleri -->
+            <div class="canvas-all-controls">
+                <div class="canvas-controls-row">
+                    <button class="canvas-control-btn" id="btnZoomIn" data-i18n-title="zoomIn" title="Yakınlaştır">+</button>
+                    <button class="canvas-control-btn" id="btnZoomOut" data-i18n-title="zoomOut" title="Uzaklaştır">−</button>
+                    <button class="canvas-control-btn" id="btnResetView" data-i18n-title="resetView" title="Ekrana Sığdır">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <path fill="currentColor" d="M5 15H3v4c0 1.1.9 2 2 2h4v-2H5v-4zM5 5h4V3H5c-1.1 0-2 .9-2 2v4h2V5zm14-2h-4v2h4v4h2V5c0-1.1-.9-2-2-2zm0 16h-4v2h4c1.1 0 2-.9 2-2v-4h-2v4zM12 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                        </svg>
+                    </button>
+                    <button class="canvas-control-btn" id="btnClearAll" data-i18n-title="clearAll" title="Temizle">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor" />
+                        </svg>
+                    </button>
+                    <input type="file" id="fileInput" style="display: none;" accept=".json">
+                </div>
+            </div>
+
+            <!-- Status Label -->
+            <div id="statusLabel" class="status-label"></div>
+            <div id="dimensionLabel" class="dimension-label" style="display: none;"></div>
+            <canvas id="mainCanvas"></canvas>
+        </div>
+
+    </div>
+
+    <div id="panel-resizer" class="panel-resizer" style="display: none;"></div>
+
+    <!-- 3D PANEL -->
+    <div id="panel-3d" style="display: none;">
+        <div id="three-container">
+            <span class="panel-title" data-i18n="view3D">3B GÖRÜNÜM</span>
+            <div class="controls-3d">
+                <div class="view-presets">
+                    <button class="preset-btn" id="btn3DTop" title="Üst Görünüm">
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                            <rect x="4" y="8" width="16" height="10" fill="none" stroke="currentColor" stroke-width="2" />
+                            <line x1="4" y1="8" x2="8" y2="4" stroke="currentColor" stroke-width="2" />
+                            <line x1="20" y1="8" x2="16" y2="4" stroke="currentColor" stroke-width="2" />
+                            <line x1="8" y1="4" x2="16" y2="4" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </button>
+                    <button class="preset-btn" id="btn3DFront" title="Ön Görünüm">
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                            <rect x="4" y="6" width="16" height="12" fill="none" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </button>
+                    <button class="preset-btn" id="btn3DSide" title="Yan Görünüm">
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                            <rect x="6" y="6" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" />
+                            <line x1="6" y1="6" x2="10" y2="3" stroke="currentColor" stroke-width="1.5" />
+                            <line x1="18" y1="6" x2="22" y2="3" stroke="currentColor" stroke-width="1.5" />
+                        </svg>
+                    </button>
+                    <button class="preset-btn active" id="btn3DISO" title="İzometrik Görünüm">
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                            <path d="M12 2L2 7v10l10 5 10-5V7L12 2z" fill="none" stroke="currentColor" stroke-width="2" />
+                            <path d="M12 22V12M2 7l10 5 10-5" fill="none" stroke="currentColor" stroke-width="1.5" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="zoom-controls-3d">
+                    <div class="zoom-row">
+                        <button class="zoom-btn-3d" id="btn3DZoomIn" title="Yakınlaştır">+</button>
+                        <button class="zoom-btn-3d" id="btn3DZoomOut" title="Uzaklaştır">−</button>
+                    </div>
+                    <div class="zoom-row">
+                        <button class="zoom-btn-3d" id="btn3DFitAll" title="Tümünü Sığdır">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0013 3.06V1h-2v2.06A8.994 8.994 0 003.06 11H1v2h2.06A8.994 8.994 0 0011 20.94V23h2v-2.06A8.994 8.994 0 0020.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                        <button class="zoom-btn-3d" id="btn3DFullScreen" title="Tam Ekran">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="angleDisplay" class="angle-display">θ: 0° φ: 0°</div>
+            <div id="info3D" class="info-3d">
+                <span data-i18n="drag3DInfo">Sol: taşı · Sağ: döndür · Orta: yakınlaştır</span>
+            </div>
+            <canvas id="canvas3D"></canvas>
+        </div>
+    </div>
+
+    </div>
+
+    <!-- SAĞ PANEL -->
+    <div id="right-panel">
+        <div class="result-box">
+            <span class="panel-title" data-i18n="geometricProps">GEOMETRİK ÖZELLİKLER</span>
+            <div class="result-content">
+                <div class="input-row single-col">
+                    <div class="input-group readonly">
+                        <span class="text-label" data-i18n="areaLabel">Kesit Alanı</span>
+                        <span class="value-readonly" id="valArea">0.0</span>
+                        <span class="unit-input">mm²</span>
+                    </div>
+                </div>
+                <div id="shapesListSection" class="shapes-list-section">
+                    <span class="sub-panel-title" data-i18n="shapesListTitle">Kesitler</span>
+                    <div id="shapesList" class="shapes-list-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-box">
+            <span class="panel-title" data-i18n="inertiaResults">ATALET MOMENTLERİ</span>
+            <div class="result-content">
+                <div class="input-row single-col">
+                    <div class="input-group readonly">
+                        <span class="math-label">I<span class="sub">x</span></span>
+                        <span class="value-readonly" id="valIx">0.00</span>
+                        <span class="unit-input">mm⁴</span>
+                    </div>
+                </div>
+                <div class="input-row single-col">
+                    <div class="input-group readonly">
+                        <span class="math-label">I<span class="sub">y</span></span>
+                        <span class="value-readonly" id="valIy">0.00</span>
+                        <span class="unit-input">mm⁴</span>
+                    </div>
+                </div>
+                <div class="input-row single-col">
+                    <div class="input-group readonly">
+                        <span class="math-label">I<span class="sub">xy</span></span>
+                        <span class="value-readonly" id="valIxy">0.00</span>
+                        <span class="unit-input">mm⁴</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BURULMA MOMENTİ GİRİŞ KUTUSU -->
+        <div class="result-box" id="torsionInputBox">
+            <span class="panel-title">BURULMA MOMENTİ</span>
+            <div class="result-content">
+                <div class="input-row single-col">
+                    <div class="input-group">
+                        <span class="math-label">T</span>
+                        <input type="number" id="tbTorsion" step="0.1" value="1.50">
+                        <span class="unit-input">kNm</span>
+                    </div>
+                </div>
+                <div class="input-row single-col">
+                    <div class="slider-row-compact">
+                        <input type="range" id="tbTorsionSlider" min="-10" max="10" step="0.1" value="1.5"
+                               title="Burulma momentini sürükleyerek değiştirin">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BURULMA GERİLMESİ SONUÇLARI -->
+        <div class="result-box" id="torsionResultsBox">
+            <span class="panel-title">BURULMA GERİLMESİ</span>
+            <div class="result-content">
+                <div class="input-row single-col">
+                    <div class="input-group readonly stress-max">
+                        <span class="math-label">τ<span class="sub">max</span></span>
+                        <span class="value-readonly" id="valTauMax">0.00</span>
+                        <span class="unit-input">MPa</span>
+                    </div>
+                </div>
+                <div class="input-row single-col">
+                    <div class="input-group readonly">
+                        <span class="math-label" id="lblTauMin">τ<span class="sub">min</span></span>
+                        <span class="value-readonly" id="valTauMin">0.00</span>
+                        <span class="unit-input">MPa</span>
+                    </div>
+                </div>
+                <!-- Kompozit (çok malzemeli) kesitlerde malzeme bazında gerilmeler -->
+                <div id="torsionMaterialList" class="shapes-list-section" style="display:none;">
+                    <span class="sub-panel-title">Malzeme Bazında Gerilmeler</span>
+                    <div id="torsionMaterialRows" class="shapes-list-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BURULMA RİJİTLİĞİ VE DÖNME -->
+        <div class="result-box" id="torsionRigidityBox">
+            <span class="panel-title">BURULMA RİJİTLİĞİ</span>
+            <div class="result-content">
+                <div class="input-row single-col">
+                    <div class="input-group readonly">
+                        <span class="math-label" id="lblGIp">ΣGI<span class="sub">p</span></span>
+                        <span class="value-readonly" id="valGIp">0.00</span>
+                        <span class="unit-input">kNm²</span>
+                    </div>
+                </div>
+                <div class="input-row single-col">
+                    <div class="input-group readonly">
+                        <span class="math-label">θ</span>
+                        <span class="value-readonly" id="valTheta">0.00</span>
+                        <span class="unit-input">°/m</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- POLAR ATALET MOMENTİ -->
+        <div class="result-box" id="polarInertiaBox">
+            <span class="panel-title" id="lblPolarBoxTitle">POLAR ATALET MOMENTİ</span>
+            <div class="result-content">
+                <div class="input-row single-col">
+                    <div class="input-group readonly">
+                        <span class="math-label" id="lblIp">I<span class="sub">p</span></span>
+                        <span class="value-readonly" id="valIp">0.00</span>
+                        <span class="unit-input">mm⁴</span>
+                    </div>
+                </div>
+                <div class="input-row single-col">
+                    <div class="input-group readonly">
+                        <span class="math-label">W<span class="sub">t</span></span>
+                        <span class="value-readonly" id="valWt">0.00</span>
+                        <span class="unit-input">mm³</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirmModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h3 data-i18n="confirmTitle">Onay</h3>
+            <p id="confirmMessage" data-i18n="confirmClearAll">Tümünü temizlemek istediğinize emin misiniz?</p>
+            <div class="modal-buttons">
+                <button id="btnConfirmYes" class="modal-btn confirm" data-i18n="btnYes">Evet</button>
+                <button id="btnConfirmNo" class="modal-btn cancel" data-i18n="btnNo">Hayır</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="./script.js"></script>
+    <script src="./script3d.js"></script>
+    <script>
+        document.querySelectorAll('.left-panel-year').forEach(el => { el.textContent = new Date().getFullYear(); });
+    </script>
+    <script>
+        // Sayfa başlığı script.js içindeki updateTorsionTitle() tarafından yönetilir
+        document.addEventListener('DOMContentLoaded', function () {
+            var manifestLink = document.getElementById('pwa-manifest');
+            if (manifestLink) manifestLink.setAttribute('href', './manifest.json');
+        });
+    </script>
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js', { scope: './' }).then(reg => {
+                    console.log('Vetin PWA: ServiceWorker registered with scope:', reg.scope);
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                let notification = document.createElement('div');
+                                notification.className = 'update-notification';
+                                notification.innerHTML = '<span>Yeni güncelleme mevcut.</span> <button onclick="window.location.reload()">Yenile</button>';
+                                document.body.appendChild(notification);
+                            }
+                        });
+                    });
+                }).catch(err => console.error('Vetin PWA: ServiceWorker registration failed:', err));
+            });
+        }
+    </script>
+</body>
+
+</html>

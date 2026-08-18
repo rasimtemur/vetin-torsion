@@ -1,0 +1,16 @@
+{
+  "name": "Vetin - Burulma",
+  "short_name": "Vetin",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2c3e50",
+  "description": "Dairesel ve halka kesitlerde burulma analizi için mühendislik aracı.",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
