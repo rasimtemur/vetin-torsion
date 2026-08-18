@@ -97,7 +97,7 @@ For the same reason the shading uses **crease-angle normal smoothing** instead o
 
 ---
 
-## 📐 Theory, Assumptions and Limitations
+## 📐 Theory, Assumptions, and Limitations
 
 ### Notation
 
