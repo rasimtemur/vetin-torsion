@@ -13,6 +13,14 @@
 
 ---
 
+## 🌐 Online Access
+
+> **[https://www.rasimtemur.com/vetin/torsion/](https://www.rasimtemur.com/vetin/torsion/)**
+
+The application is accessible directly through a web browser without requiring any software installation, user registration, or server-side processing. All computations are performed client-side.
+
+---
+
 ## 📋 Description
 
 **Vetin Torsion** is an open-source, web-based application developed for educational use in mechanics of materials curricula. It enables the interactive construction of shaft cross-sections — solid circles, rings (annuli), rectangles and squares — and computes the shear-stress distribution produced by a torsional moment.
