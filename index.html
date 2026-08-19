@@ -210,15 +210,18 @@
                                 <polyline points="9 18 15 12 9 6"></polyline>
                             </svg>
                             <div class="settings-submenu">
-                                <button class="settings-submenu-item" id="submenu-theme-light" data-theme="light">
+                                <!-- data-set-theme: data-theme yazılamaz; tema token blokları
+                                     ([data-theme="dark"] { --... }) butonun kendisinde palet
+                                     üzerine yazıp yazıyı silik gösteriyordu -->
+                                <button class="settings-submenu-item" id="submenu-theme-light" data-set-theme="light">
                                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z"/></svg>
                                     <span data-i18n="themeLight">Aydınlık</span>
                                 </button>
-                                <button class="settings-submenu-item" id="submenu-theme-dark" data-theme="dark">
+                                <button class="settings-submenu-item" id="submenu-theme-dark" data-set-theme="dark">
                                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
                                     <span data-i18n="themeDark">Karanlık</span>
                                 </button>
-                                <button class="settings-submenu-item" id="submenu-theme-blueprint" data-theme="blueprint">
+                                <button class="settings-submenu-item" id="submenu-theme-blueprint" data-set-theme="blueprint">
                                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M17,14H15V12H17M17,11H15V9H17M17,8H15V6H17M13,14H11V12H13M13,11H11V9H13M13,8H11V6H13M9,14H7V12H9M9,11H7V9H9M9,8H7V6H9M20,2H4C2.89,2 2,2.89 2,4V16C2,17.11 2.89,18 4,18H20C21.11,18 22,17.11 22,16V4C22,2.89 21.11,2 20,2M20,16H4V4H20V16M22,20H2V22H22V20Z"/></svg>
                                     <span data-i18n="themeBlueprint">Ozalit</span>
                                 </button>
@@ -345,33 +348,18 @@
         <div id="three-container">
             <span class="panel-title" data-i18n="view3D">3B GÖRÜNÜM</span>
             <div class="controls-3d">
-                <div class="view-presets">
-                    <button class="preset-btn" id="btn3DTop" title="Üst Görünüm">
-                        <svg viewBox="0 0 24 24" width="16" height="16">
-                            <rect x="4" y="8" width="16" height="10" fill="none" stroke="currentColor" stroke-width="2" />
-                            <line x1="4" y1="8" x2="8" y2="4" stroke="currentColor" stroke-width="2" />
-                            <line x1="20" y1="8" x2="16" y2="4" stroke="currentColor" stroke-width="2" />
-                            <line x1="8" y1="4" x2="16" y2="4" stroke="currentColor" stroke-width="2" />
-                        </svg>
-                    </button>
-                    <button class="preset-btn" id="btn3DFront" title="Ön Görünüm">
-                        <svg viewBox="0 0 24 24" width="16" height="16">
-                            <rect x="4" y="6" width="16" height="12" fill="none" stroke="currentColor" stroke-width="2" />
-                        </svg>
-                    </button>
-                    <button class="preset-btn" id="btn3DSide" title="Yan Görünüm">
-                        <svg viewBox="0 0 24 24" width="16" height="16">
-                            <rect x="6" y="6" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" />
-                            <line x1="6" y1="6" x2="10" y2="3" stroke="currentColor" stroke-width="1.5" />
-                            <line x1="18" y1="6" x2="22" y2="3" stroke="currentColor" stroke-width="1.5" />
-                        </svg>
-                    </button>
-                    <button class="preset-btn active" id="btn3DISO" title="İzometrik Görünüm">
-                        <svg viewBox="0 0 24 24" width="16" height="16">
-                            <path d="M12 2L2 7v10l10 5 10-5V7L12 2z" fill="none" stroke="currentColor" stroke-width="2" />
-                            <path d="M12 22V12M2 7l10 5 10-5" fill="none" stroke="currentColor" stroke-width="1.5" />
-                        </svg>
-                    </button>
+                <!-- AutoCAD tarzı ViewCube: küpe tıklayınca o yüze döner, sürükleyince
+                     kamerayı serbest döndürür. Küp doku/etiketleri script3d.js'te üretilir. -->
+                <div class="viewcube-nav">
+                    <canvas id="viewcubeCanvas" width="112" height="112" title="Sürükle: döndür · Tıkla: yüze bak"></canvas>
+                    <div class="view-btns">
+                        <button class="view-btn" data-view="on" title="Ön Görünüm">ÖN</button>
+                        <button class="view-btn" data-view="arka" title="Arka Görünüm">ARKA</button>
+                        <button class="view-btn" data-view="sol" title="Sol Görünüm">SOL</button>
+                        <button class="view-btn" data-view="sag" title="Sağ Görünüm">SAĞ</button>
+                        <button class="view-btn" data-view="ust" title="Üst Görünüm">ÜST</button>
+                        <button class="view-btn" data-view="3b" title="İzometrik Görünüm">3B</button>
+                    </div>
                 </div>
                 <div class="zoom-controls-3d">
                     <div class="zoom-row">

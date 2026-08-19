@@ -3,15 +3,19 @@
 // === THREE.JS DEĞİŞKENLERİ ===
 let scene, camera, renderer;
 let barMesh, edgesMesh;
-let axesHelper = null;
+let axesHelper = null;       // uç kesitle birlikte dönen eksen takımı
+let refAxesHelper = null;    // sabit uçtaki (dönmeyen) eksen takımı — gri
 let ambientLight, directionalLight, directionalLight2;
 let isInitialized = false;
 
 // Kamera kontrolleri
 let cameraDistance = 500;
-// Kullanıcı tanımlı başlangıç açıları:
-let cameraTheta = 112 * Math.PI / 180;   // Yatay açı (112 derece)
-let cameraPhi = 80 * Math.PI / 180;       // Dikey açı (80 derece)
+// Varsayılan (izometrik / "3B") bakış açıları — açılış görünümü, "Görünümü
+// sıfırla" ve ViewCube'un 3B düğmesi aynı kaynaktan beslenir.
+const ISO_THETA = 112 * Math.PI / 180;   // Yatay açı
+const ISO_PHI = 80 * Math.PI / 180;      // Dikey açı
+let cameraTheta = ISO_THETA;
+let cameraPhi = ISO_PHI;
 let targetX = 0, targetY = 0, targetZ = 0;
 
 // Mouse kontrolü
@@ -41,6 +45,10 @@ const DEFORM_REF_TORQUE = 1e6;     // Nmm (= 1 kNm)
 const DEFORM_REF_DEG = 25;         // referans momentte görünen uç dönmesi
 const DEFORM_MAX_DEG = 200;        // çok büyük momentlerde görüntü okunmaz olmasın
 let deformScaleClamped = false;
+
+// Eksen takımı kol uzunluğu (mm) ve gri takımın çizilmesi için gereken en küçük dönme
+const AXES_LENGTH = 50;
+const AXES_TWIST_EPS = 1e-4;      // rad (~0.006°): altında iki takım zaten üst üste biner
 
 // Gerçek dönme açıları gözle görülemeyecek kadar küçüktür (tipik olarak
 // derecenin binde biri); şekil değiştirme, sonlu eleman programlarındaki gibi
@@ -142,24 +150,29 @@ function smoothGeometryNormals(geometry, creaseDeg) {
 // Kesiti burulmuş hâline taşır: her kesit ekseni etrafında φ = k·θ'·z kadar
 // döner. Dikdörtgen kesitte ayrıca çarpılma vardır (w = k·θ'·ψ) — dairesel
 // kesitte ψ ≡ 0 olduğundan kesitler düzlem kalır.
+// Normal yumuşatma, burulma olsun olmasın HER geometriye uygulanır: ExtrudeGeometry
+// indekssiz olduğu için kendi normalleri üçgen başınadır ve daireyi çokgen gösterir.
+// Eskiden yumuşatma yalnız şekil değiştirme yolunun sonundaydı; moment sıfırlanınca
+// silindir prizmaya dönüyordu.
 function applyTorsionDeformation(geometry, rectSize) {
-    if (!showDeformed) return;
     const rate = torsionTwistRate();
     const k = getDeformScale();
-    if (!rate || !k) return;
 
-    const canWarp = rectSize && typeof rectWarpPsi === 'function';
-    const pos = geometry.attributes.position;
+    if (showDeformed && rate && k) {
+        const canWarp = rectSize && typeof rectWarpPsi === 'function';
+        const pos = geometry.attributes.position;
 
-    for (let i = 0; i < pos.count; i++) {
-        const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
-        const phi = k * rate * z;
-        const c = Math.cos(phi), s = Math.sin(phi);
-        const dz = canWarp ? k * rate * rectWarpPsi(x, y, rectSize.w, rectSize.h) : 0;
-        pos.setXYZ(i, x * c - y * s, x * s + y * c, z + dz);
+        for (let i = 0; i < pos.count; i++) {
+            const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+            const phi = k * rate * z;
+            const c = Math.cos(phi), s = Math.sin(phi);
+            const dz = canWarp ? k * rate * rectWarpPsi(x, y, rectSize.w, rectSize.h) : 0;
+            pos.setXYZ(i, x * c - y * s, x * s + y * c, z + dz);
+        }
+
+        pos.needsUpdate = true;
     }
 
-    pos.needsUpdate = true;
     // Düz (üçgen başına) normal yerine keskin kenarları koruyan yumuşatma
     smoothGeometryNormals(geometry, DEFORM_CREASE_DEG);
 }
@@ -312,30 +325,23 @@ function init3D() {
     // Uygulama başlangıcındaki tema ayarını yansıt
     window.update3DTheme();
 
-    // Eksen yardımcısı - Koordinat eksenleri (geometrik merkezde güncellenecek)
-    axesHelper = new THREE.AxesHelper(50);
-    
-    // RENK DEĞİŞİMİ: Kırmızı -> Lacivert, Mavi (Lacivert) -> Kırmızı
-    const colors = axesHelper.geometry.attributes.color;
-    
-    // X Ekseni (Kırmızı idi) -> Lacivert yap (Navy: 0, 0, 0.5)
-    colors.setXYZ(0, 0, 0, 0.5);
-    colors.setXYZ(1, 0, 0, 0.5);
-    
-    // Y Ekseni (Yeşil idi) -> Koyu Yeşil yap (0, 0.5, 0)
-    colors.setXYZ(2, 0, 0.5, 0);
-    colors.setXYZ(3, 0, 0.5, 0);
-    
-    // Z Ekseni (Mavi/Lacivert idi) -> Kırmızı yap (1, 0, 0)
-    colors.setXYZ(4, 1, 0, 0);
-    colors.setXYZ(5, 1, 0, 0);
-    
-    colors.needsUpdate = true;
-
-    // Rotate 180 deg around Z to point X Left and Y Down
+    // Eksen yardımcıları — konumları update3DBar'da uç kesite taşınır.
+    // Renk düzeni: X lacivert, Y koyu yeşil, Z kırmızı (AxesHelper'ın kendi
+    // kırmızı-yeşil-mavi sırası değil; 2B çizimdeki eksen renkleriyle uyum için).
+    axesHelper = new THREE.AxesHelper(AXES_LENGTH);
+    applyAxesColors(axesHelper, false);
+    // 180° Z dönmesi: X sola, Y aşağı baksın (2B tuvalle aynı yön)
     axesHelper.rotation.z = Math.PI;
-    axesHelper.position.set(0, 0, 0); // Will be updated in update3DBar
+    axesHelper.position.set(0, 0, 0);
     scene.add(axesHelper);
+
+    // Sabit uçtaki takım: aynı merkezde, dönmez, gri tonlarda. Burulma açısı iki
+    // takım arasındaki fark olarak okunur; bu yüzden ortak merkezde durmalıdır.
+    refAxesHelper = new THREE.AxesHelper(AXES_LENGTH);
+    applyAxesColors(refAxesHelper, true);
+    refAxesHelper.rotation.z = Math.PI;
+    refAxesHelper.visible = false;
+    scene.add(refAxesHelper);
 
     // Event listeners
     canvas.addEventListener('mousedown', onMouseDown3D);
@@ -360,6 +366,9 @@ function init3D() {
 
     isInitialized = true;
 
+    // ViewCube ana kameraya bağlı olduğu için kamera hazır olduktan sonra kurulur
+    initViewCube();
+
     // İlk render
     update3DBar();
     animate();
@@ -380,7 +389,10 @@ function get3DColors() {
             ambientInt: 0.8,
             directional: 0xffffff,
             dirInt: 0.8,
-            dir2Int: 0.4
+            dir2Int: 0.4,
+            // ViewCube: yüz dokusu canvas'ta çizildiği için CSS renk dizgileri
+            cubeFace: '#1A2333', cubeLine: '#3A4658', cubeText: '#DFE6F0',
+            cubeEdge: 0x2F3B4D, cubeRing: 0x3A4658
         };
     } else if (theme === 'blueprint') {
         return {
@@ -391,7 +403,9 @@ function get3DColors() {
             ambientInt: 0.9,
             directional: 0xCFE6F5,
             dirInt: 0.7,
-            dir2Int: 0.35
+            dir2Int: 0.35,
+            cubeFace: '#0D2647', cubeLine: '#2F5A8F', cubeText: '#DBEEFF',
+            cubeEdge: 0x2F5A8F, cubeRing: 0x2F5A8F
         };
     } else {
         return {
@@ -402,9 +416,37 @@ function get3DColors() {
             ambientInt: 0.6,
             directional: 0xffffff,
             dirInt: 0.8,
-            dir2Int: 0.3
+            dir2Int: 0.3,
+            cubeFace: '#E9EAE6', cubeLine: '#A8ADB5', cubeText: '#3A4048',
+            cubeEdge: 0x7A8290, cubeRing: 0x55617A
         };
     }
+}
+
+// Eksen kolu renkleri [X, Y, Z]. Koyu zeminde (koyu tema ve ozalit) parlak
+// tonlara çekilir. Gri takımda (sabit uç) üç ayrı ton kullanılır: renk taşımadığı
+// için hangi kolun hangi eksen olduğu ancak tonla ayırt edilir.
+function axesPalette(onDark, gray) {
+    if (gray) {
+        return onDark
+            ? [[0.78, 0.78, 0.80], [0.60, 0.60, 0.63], [0.44, 0.44, 0.47]]
+            : [[0.35, 0.35, 0.38], [0.52, 0.52, 0.55], [0.68, 0.68, 0.71]];
+    }
+    return onDark
+        ? [[0.2, 0.5, 1.0], [0.2, 1.0, 0.2], [1.0, 0.3, 0.3]]
+        : [[0.0, 0.0, 0.5], [0.0, 0.5, 0.0], [1.0, 0.0, 0.0]];
+}
+
+function applyAxesColors(helper, gray) {
+    if (!helper) return;
+    const theme = document.documentElement.getAttribute('data-theme');
+    const onDark = theme === 'dark' || theme === 'blueprint';
+    const [cx, cy, cz] = axesPalette(onDark, gray);
+    const cols = helper.geometry.attributes.color;
+    cols.setXYZ(0, cx[0], cx[1], cx[2]); cols.setXYZ(1, cx[0], cx[1], cx[2]);
+    cols.setXYZ(2, cy[0], cy[1], cy[2]); cols.setXYZ(3, cy[0], cy[1], cy[2]);
+    cols.setXYZ(4, cz[0], cz[1], cz[2]); cols.setXYZ(5, cz[0], cz[1], cz[2]);
+    cols.needsUpdate = true;
 }
 
 window.update3DTheme = function() {
@@ -412,6 +454,9 @@ window.update3DTheme = function() {
     
     const colors = get3DColors();
     scene.background = new THREE.Color(colors.background);
+
+    // Küp yüzleri canvas dokusuna çizildiği için renk değişimi yeniden kurulmayı gerektirir
+    buildViewCube();
     
     if (ambientLight) {
         ambientLight.color.setHex(colors.ambient);
@@ -427,27 +472,8 @@ window.update3DTheme = function() {
     }
     
     // Koyu zeminlerde (koyu tema ve ozalit) eksenler parlak tonlara çekilir
-    if (axesHelper) {
-        const theme = document.documentElement.getAttribute('data-theme');
-        const onDark = theme === 'dark' || theme === 'blueprint';
-        const cols = axesHelper.geometry.attributes.color;
-        if (onDark) {
-            // X: Light Blue
-            cols.setXYZ(0, 0.2, 0.5, 1.0); cols.setXYZ(1, 0.2, 0.5, 1.0);
-            // Y: Light Green
-            cols.setXYZ(2, 0.2, 1.0, 0.2); cols.setXYZ(3, 0.2, 1.0, 0.2);
-            // Z: Light Red
-            cols.setXYZ(4, 1.0, 0.3, 0.3); cols.setXYZ(5, 1.0, 0.3, 0.3);
-        } else {
-            // X: Navy
-            cols.setXYZ(0, 0, 0, 0.5); cols.setXYZ(1, 0, 0, 0.5);
-            // Y: Dark Green
-            cols.setXYZ(2, 0, 0.5, 0); cols.setXYZ(3, 0, 0.5, 0);
-            // Z: Red
-            cols.setXYZ(4, 1, 0, 0); cols.setXYZ(5, 1, 0, 0);
-        }
-        cols.needsUpdate = true;
-    }
+    applyAxesColors(axesHelper, false);
+    applyAxesColors(refAxesHelper, true);
 };
 
 // === KAMERA POZİSYONU ===
@@ -475,6 +501,209 @@ function updateCameraPosition() {
         const phiDeg = (cameraPhi * 180 / Math.PI).toFixed(1);
         angleDisplay.textContent = `📐 θ: ${thetaDeg}°  φ: ${phiDeg}°`;
     }
+
+    // ViewCube ana kameranın bakış yönünü yansıtır. Sürekli döngüde değil,
+    // yalnız kamera değişince çizilir: durağan sahnede küp de durağandır.
+    renderViewCube();
+}
+
+// === VIEWCUBE (AutoCAD tarzı navigasyon küpü) ===
+// Küçük tuvalde KENDİ sahnesi ve ortografik kamerasıyla çizilir; ana sahneye
+// eklenmez ki modelin ışığı, opaklığı ve şekil değiştirmesi küpü etkilemesin.
+// Yönünü ana kameradan alır; tıklanan yüz kamerayı o yöne döndürür.
+let cubeRenderer = null, cubeScene = null, cubeCamera = null, cubeMesh = null;
+let cubeReady = false;
+
+// Çubuk +z boyunca extrude edilir, kesit x-y düzlemindedir. Buradan:
+//   ÖN/ARKA = ±x (çubuğun boyu görünür), ÜST/ALT = ±y, SAĞ/SOL = ∓z (kesite bakış).
+// SAĞ'ın -z olması ÖN görünümünden gelir: kamera +x'teyken ekranın sağı -z yönüdür,
+// yani cismin sağ yüzü -z tarafındadır (teknik resimdeki sağ görünüş).
+const VIEW_DIRECTIONS = {
+    on:   [1, 0, 0],
+    arka: [-1, 0, 0],
+    ust:  [0, 1, 0],
+    alt:  [0, -1, 0],
+    sol:  [0, 0, 1],
+    sag:  [0, 0, -1]
+};
+
+// Tam tepeden bakışta lookAt dejenere olur (bakış yönü camera.up ile çakışır);
+// bu yüzden kutba tam oturulmaz. φ→0'da ekran eksenleri yalnız θ'ya bağlı olduğu
+// için θ da serbest değildir: ÖN görünümüyle aynı θ (=0) seçilir, böylece ÜST'e
+// geçerken çubuk ekranda yatay kalır, sol-sağ yönü değişmez.
+const POLE_EPS = 0.01;
+const POLE_THETA = 0;
+
+// Bakış yönü (hedeften kameraya birim vektör) → küresel kamera açıları.
+function dirToAngles(x, y, z) {
+    const len = Math.hypot(x, y, z) || 1;
+    const dx = x / len, dy = y / len, dz = z / len;
+    if (Math.abs(dy) > 0.999) {
+        return { theta: POLE_THETA, phi: dy > 0 ? POLE_EPS : Math.PI - POLE_EPS };
+    }
+    return {
+        theta: Math.atan2(dz, dx),
+        phi: Math.acos(Math.min(1, Math.max(-1, dy)))
+    };
+}
+
+function initViewCube() {
+    const canvas = document.getElementById('viewcubeCanvas');
+    if (!canvas || cubeRenderer) return;
+
+    cubeRenderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+    cubeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    cubeRenderer.setSize(canvas.width, canvas.height);
+    // Ortografik: küp bakış açısına göre boyut değiştirmesin, hep aynı büyüklükte dursun
+    cubeCamera = new THREE.OrthographicCamera(-2.3, 2.3, 2.3, -2.3, 0.1, 100);
+
+    buildViewCube();
+    bindViewCubeEvents(canvas);
+}
+
+// Küp sahnesini kurar. Yüz dokuları temaya bağlı olduğu için tema değişiminde
+// bu fonksiyon yeniden çağrılır (eski doku/geometriler serbest bırakılır).
+function buildViewCube() {
+    if (!cubeRenderer) return;
+
+    if (cubeScene) {
+        cubeScene.traverse(obj => {
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+                const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+                mats.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); });
+            }
+        });
+    }
+
+    const colors = get3DColors();
+    cubeScene = new THREE.Scene();
+
+    // Yüz etiketleri canvas dokusuna yazılır: three.js'in doğrudan yazı desteği yok.
+    // rotation: BoxGeometry'nin ±y yüzlerindeki doku eşlemesi yazıyı 90° yatırır;
+    // ÜST/ALT görünümünde etiket düz okunsun diye dokuda ters yönde döndürülür.
+    const faceMaterial = (label, rotation = 0) => {
+        const c = document.createElement('canvas');
+        c.width = c.height = 128;
+        const g = c.getContext('2d');
+        g.fillStyle = colors.cubeFace;
+        g.fillRect(0, 0, 128, 128);
+        g.strokeStyle = colors.cubeLine;
+        g.lineWidth = 5;
+        g.strokeRect(3, 3, 122, 122);
+        g.fillStyle = colors.cubeText;
+        g.font = "700 24px 'Segoe UI', sans-serif";
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.save();
+        g.translate(64, 67);
+        g.rotate(rotation);
+        g.fillText(label, 0, 0);
+        g.restore();
+        const tex = new THREE.CanvasTexture(c);
+        tex.anisotropy = 4;
+        return new THREE.MeshBasicMaterial({ map: tex });
+    };
+
+    // BoxGeometry yüz sırası: +x, -x, +y, -y, +z, -z (bkz. VIEW_DIRECTIONS)
+    cubeMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(1.5, 1.5, 1.5),
+        [faceMaterial('ÖN'), faceMaterial('ARKA'), faceMaterial('ÜST', -Math.PI / 2),
+         faceMaterial('ALT', Math.PI / 2), faceMaterial('SOL'), faceMaterial('SAĞ')]
+    );
+    cubeScene.add(cubeMesh);
+
+    cubeScene.add(new THREE.LineSegments(
+        new THREE.EdgesGeometry(cubeMesh.geometry),
+        new THREE.LineBasicMaterial({ color: colors.cubeEdge })
+    ));
+
+    // Küpün altındaki halka: AutoCAD ViewCube'undaki pusula halkasının karşılığı.
+    // Yön harfleri (K/G/D/B) konmaz — çubuğun coğrafi bir yönü yok.
+    const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(1.62, 0.055, 8, 64),
+        new THREE.MeshBasicMaterial({ color: colors.cubeRing, transparent: true, opacity: 0.85 })
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = -1.05;
+    cubeScene.add(ring);
+
+    cubeReady = true;
+    renderViewCube();
+}
+
+function renderViewCube() {
+    if (!cubeReady || !camera) return;
+
+    const camDir = new THREE.Vector3()
+        .subVectors(camera.position, new THREE.Vector3(targetX, targetY, targetZ))
+        .normalize();
+    cubeCamera.position.copy(camDir).multiplyScalar(6);
+    cubeCamera.up.copy(camera.up);
+    cubeCamera.lookAt(0, 0, 0);
+    cubeRenderer.render(cubeScene, cubeCamera);
+}
+
+// Küpte tıklama ile sürüklemeyi ayırt eder: 4 pikselden büyük hareket sürükleme
+// (serbest döndürme), altı tıklamadır (tıklanan yüze dönülür).
+function bindViewCubeEvents(canvas) {
+    const raycaster = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    let press = null, dragged = false;
+
+    const pick = (e) => {
+        if (!cubeMesh || !cubeCamera) return null;
+        const r = canvas.getBoundingClientRect();
+        ndc.set(((e.clientX - r.left) / r.width) * 2 - 1,
+                -((e.clientY - r.top) / r.height) * 2 + 1);
+        raycaster.setFromCamera(ndc, cubeCamera);
+        return raycaster.intersectObject(cubeMesh)[0] || null;
+    };
+
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+    canvas.addEventListener('mousedown', (e) => {
+        if (!isInitialized) return;
+        e.preventDefault();
+        isAnimating = false;   // kullanıcı müdahalesi süren animasyonu keser
+        press = { x: e.clientX, y: e.clientY };
+        dragged = false;
+
+        const onMove = (ev) => {
+            if (!press) return;
+            const dx = ev.clientX - press.x, dy = ev.clientY - press.y;
+            if (!dragged && Math.hypot(dx, dy) > 4) dragged = true;
+            if (!dragged) return;
+            cameraTheta += dx * 0.01;
+            cameraPhi = Math.min(Math.max(cameraPhi - dy * 0.01, POLE_EPS), Math.PI - POLE_EPS);
+            press = { x: ev.clientX, y: ev.clientY };
+            updateCameraPosition();
+        };
+        const onUp = (ev) => {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+            if (!dragged) {
+                const hit = pick(ev);
+                // face.normal nesne uzayındadır; küp döndürülmediği için doğrudan
+                // dünya eksenini verir
+                if (hit && hit.face) setViewDirection(hit.face.normal);
+            }
+            press = null;
+        };
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        if (press) return;
+        canvas.style.cursor = pick(e) ? 'pointer' : 'grab';
+    });
+}
+
+// Yalnız bakış yönünü değiştirir; yakınlaştırma ve kaydırma korunur (AutoCAD davranışı).
+function setViewDirection(vec) {
+    const { theta, phi } = dirToAngles(vec.x, vec.y, vec.z);
+    animateCameraTo(theta, phi, cameraDistance);
 }
 
 
@@ -1093,6 +1322,21 @@ function update3DBar() {
     if (axesHelper) {
         // Enkesit düzleminden 0.5 birim (mm) öne al (çakışmayı önlemek için)
         axesHelper.position.set(-center.x, -center.y, barLength - center.z + 0.5);
+
+        // Uç kesit ne kadar döndüyse eksen takımı da o kadar döner. Bağıntı
+        // çizilen şekil değiştirmeyle AYNI olmalı (bkz. applyTorsionDeformation):
+        // φ(z) = k·θ′·z, uçta z = barLength.
+        const endTwist = deformationActive()
+            ? getDeformScale() * torsionTwistRate() * barLength
+            : 0;
+        axesHelper.rotation.z = Math.PI + endTwist;
+
+        if (refAxesHelper) {
+            refAxesHelper.position.copy(axesHelper.position);
+            // Dönme yokken iki takım birebir üst üste biner (aynı çizgi, aynı
+            // derinlik); gri takım yalnız görünür bir burulma varken çizilir.
+            refAxesHelper.visible = Math.abs(endTwist) > AXES_TWIST_EPS;
+        }
     }
 
     // Wrapper gruplar oluştur (döndürme yok - çubuk mavi/Z ekseninde uzanır)
@@ -1228,8 +1472,8 @@ function animateCameraTo(targetTheta, targetPhi, targetDist) {
 
 // === GÖRÜNÜMÜ SIFIRLA ===
 function reset3DView() {
-    const targetTheta = 112 * Math.PI / 180;
-    const targetPhi = 80 * Math.PI / 180;
+    const targetTheta = ISO_THETA;
+    const targetPhi = ISO_PHI;
     
     // Obje merkezde ama görsel olarak sağda kaldığı için
     // Kamerayı biraz sağa (ekran koordinatı) kaydırarak objeyi sola alıyoruz.
@@ -1368,43 +1612,10 @@ document.addEventListener('DOMContentLoaded', () => {
         btnReset3DView.addEventListener('click', reset3DView);
     }
 
-    // === YENİ: AutoCAD-style Görünüm Kontrolleri ===
-
-    // Üst Görünüm
-    const btn3DTop = document.getElementById('btn3DTop');
-    if (btn3DTop) {
-        btn3DTop.addEventListener('click', () => {
-            setView('top');
-            updatePresetButtons('btn3DTop');
-        });
-    }
-
-    // Ön Görünüm
-    const btn3DFront = document.getElementById('btn3DFront');
-    if (btn3DFront) {
-        btn3DFront.addEventListener('click', () => {
-            setView('front');
-            updatePresetButtons('btn3DFront');
-        });
-    }
-
-    // Yan Görünüm
-    const btn3DSide = document.getElementById('btn3DSide');
-    if (btn3DSide) {
-        btn3DSide.addEventListener('click', () => {
-            setView('side');
-            updatePresetButtons('btn3DSide');
-        });
-    }
-
-    // İzometrik Görünüm
-    const btn3DISO = document.getElementById('btn3DISO');
-    if (btn3DISO) {
-        btn3DISO.addEventListener('click', () => {
-            setView('iso');
-            updatePresetButtons('btn3DISO');
-        });
-    }
+    // === ViewCube yön düğmeleri (ÖN/ARKA/SOL/SAĞ/ÜST/3B) ===
+    document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.addEventListener('click', () => setView(btn.getAttribute('data-view')));
+    });
 
     // Zoom In
     const btn3DZoomIn = document.getElementById('btn3DZoomIn');
@@ -1480,60 +1691,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ViewCube clicks
-    document.querySelectorAll('.viewcube-face').forEach(face => {
-        face.addEventListener('click', () => {
-            const view = face.getAttribute('data-view');
-            setView(view);
-        });
-    });
-
-
 });
 
 // === GÖRÜNÜM AYARLARI ===
 function setView(viewName) {
-    let targetTheta, targetPhi;
-
-    switch (viewName) {
-        case 'top':
-            targetTheta = 0;
-            targetPhi = 0.01;  // Tam üstten (0 yapınca gimbal sorunu olabilir diye 0.01)
-            break;
-        case 'front':
-            targetTheta = 0;
-            targetPhi = Math.PI / 2;
-            break;
-        case 'side':
-        case 'right':
-            targetTheta = Math.PI / 2;
-            targetPhi = Math.PI / 2;
-            break;
-        case 'iso':
-        default:
-            targetTheta = 112 * Math.PI / 180;
-            targetPhi = 80 * Math.PI / 180;
-            break;
+    if (viewName === '3b') {
+        animateCameraTo(ISO_THETA, ISO_PHI, cameraDistance);
+        return;
     }
-
-    // Mesafe aynı kalsın veya auto fit yapılabilir. 
-    // Kullanıcı deneyimi için ISO'da auto fit, diğerlerinde mevcut zoom korunabilir veya hepsi auto fit.
-    // AutoCAD genelde zoom'u korur ama burada fit yapmak daha iyi görünebilir. 
-    // Şimdilik mevcut mesafeyi kullanalım, sadece açıyı değiştirelim.
-    // İsteğe göre buraya getAutoFitDistance() eklenebilir.
-
-    animateCameraTo(targetTheta, targetPhi, cameraDistance);
-}
-
-// Preset butonlarını güncelle
-function updatePresetButtons(activeId) {
-    document.querySelectorAll('.preset-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    const activeBtn = document.getElementById(activeId);
-    if (activeBtn) {
-        activeBtn.classList.add('active');
-    }
+    const dir = VIEW_DIRECTIONS[viewName];
+    if (dir) setViewDirection({ x: dir[0], y: dir[1], z: dir[2] });
 }
 
 // === GLOBAL FONKSİYON: script.js'den çağrılacak ===

@@ -1951,9 +1951,11 @@ function updateShapesList() {
             c.ri = Math.min(Math.max(0, v), c.r - 1);
         }, 'mm'));
 
-        inputRow.appendChild(makeField('G', (typeof c.G === 'number' ? c.G : DEFAULT_G), 0.1, 1, (v) => {
+        const gField = makeField('G', (typeof c.G === 'number' ? c.G : DEFAULT_G), 0.1, 1, (v) => {
             c.G = Math.max(0.1, v);
-        }, 'GPa'));
+        }, 'GPa');
+        gField.classList.add('shape-prop-field-wide');
+        inputRow.appendChild(gField);
 
         div.appendChild(headRow);
         div.appendChild(inputRow);
@@ -2031,9 +2033,11 @@ function updateShapesList() {
             setRectSize(r, rectDims(r).w, Math.max(1, v));
         }, 'mm'));
 
-        inputRow.appendChild(makeShapePropField('G', (typeof r.G === 'number' ? r.G : DEFAULT_G), 0.1, 1, (v) => {
+        const gFieldRect = makeShapePropField('G', (typeof r.G === 'number' ? r.G : DEFAULT_G), 0.1, 1, (v) => {
             r.G = Math.max(0.1, v);
-        }, 'GPa'));
+        }, 'GPa');
+        gFieldRect.classList.add('shape-prop-field-wide');
+        inputRow.appendChild(gFieldRect);
 
         div.appendChild(headRow);
         div.appendChild(inputRow);
@@ -2610,14 +2614,27 @@ function updateOutputs() {
                 const info = document.createElement('div');
                 info.className = 'torsion-band-info';
 
+                // Ad ve malzeme ayrı kutulardır: dar panelde kırılma aralarında olur,
+                // ad kısaltılmaz
                 const nameEl = document.createElement('span');
                 nameEl.className = 'shape-name';
-                nameEl.textContent = (c ? shapeLabel(c, b.index) : ('Parça ' + (b.index + 1))) +
-                    ' (G = ' + b.G + ' GPa)';
+                const bandName = document.createElement('span');
+                bandName.textContent = c ? shapeLabel(c, b.index) : ('Parça ' + (b.index + 1));
+                const bandMat = document.createElement('span');
+                bandMat.textContent = '(G = ' + b.G + ' GPa)';
+                nameEl.appendChild(bandName);
+                nameEl.appendChild(bandMat);
 
+                // İki terim ayrı kutulardır: dar panelde satır kırılması yalnızca
+                // aralarında olur, sayı ile birim asla bölünmez
                 const tauEl = document.createElement('span');
                 tauEl.className = 'shape-area';
-                tauEl.textContent = 'τiç = ' + b.tauIn.toFixed(2) + ' | τdış = ' + b.tauOut.toFixed(2) + ' MPa';
+                const tauInEl = document.createElement('span');
+                tauInEl.textContent = 'τiç = ' + b.tauIn.toFixed(2) + ' MPa';
+                const tauOutEl = document.createElement('span');
+                tauOutEl.textContent = 'τdış = ' + b.tauOut.toFixed(2) + ' MPa';
+                tauEl.appendChild(tauInEl);
+                tauEl.appendChild(tauOutEl);
 
                 info.appendChild(nameEl);
                 info.appendChild(tauEl);

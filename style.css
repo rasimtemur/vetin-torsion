@@ -191,17 +191,6 @@
     border: 1px solid var(--fluent-stroke-color-default);
 }
 
-[data-theme="dark"] .viewcube-face {
-    background: var(--fluent-layer-fill-default);
-    border-color: var(--fluent-stroke-color-default);
-    color: var(--fluent-neutral-foreground-rest);
-}
-
-[data-theme="dark"] .view-presets {
-    background: var(--fluent-layer-fill-default);
-    border-color: var(--fluent-stroke-color-default);
-}
-
 [data-theme="dark"] .zoom-controls-3d {
     background: var(--fluent-layer-fill-default);
     border-color: var(--fluent-stroke-color-default);
@@ -1254,104 +1243,58 @@ body.view-3d-active #right-panel {
     top: 10px;
     right: 10px;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
+    align-items: center;
     gap: 8px;
     z-index: 10;
 }
 
-/* ViewCube */
-.viewcube {
-    width: 60px;
-    height: 60px;
-    position: relative;
-    perspective: 100px;
-    margin-bottom: 5px;
-}
-
-.viewcube-face {
-    position: absolute;
-    width: 28px;
-    height: 28px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid #ccc;
-    border-radius: 3px;
+/* AutoCAD tarzı ViewCube + yön düğmeleri (tunalveri/web'deki navigasyon esas alınmıştır) —
+   panel/arka plan yok: küp doğrudan sahnenin üzerinde durur, yalnız düğmeler kutuludur. */
+.viewcube-nav {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    font-weight: 600;
-    color: #666;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    gap: 6px;
 }
 
-.viewcube-face:hover {
-    background: var(--fluent-accent-fill-rest);
-    color: white;
-    border-color: var(--fluent-accent-fill-rest);
+#viewcubeCanvas {
+    display: block;
+    cursor: grab;
+    touch-action: none;
 }
 
-[data-theme="dark"] .viewcube-face:hover {
-    color: #0A0E1A;
-}
+#viewcubeCanvas:active { cursor: grabbing; }
 
-.viewcube-top {
-    top: 0;
-    left: 16px;
-}
-
-.viewcube-front {
-    top: 30px;
-    left: 0;
-}
-
-.viewcube-right {
-    top: 30px;
-    left: 32px;
-}
-
-/* View Presets */
-.view-presets {
+.view-btns {
+    width: 112px;
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 4px;
-    background: var(--fluent-layer-fill-default);
-    padding: 6px;
-    border-radius: 6px;
-    border: 1px solid var(--fluent-stroke-color-default);
-    box-shadow: var(--fluent-shadow-depth-4);
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
 }
 
-.preset-btn {
-    width: 28px;
-    height: 28px;
-    padding: 0;
+.view-btn {
+    padding: 4px 0;
     background: var(--fluent-neutral-fill-rest);
     border: 1px solid var(--fluent-stroke-color-default);
     border-radius: 4px;
-    cursor: pointer;
     color: var(--fluent-neutral-foreground-hint);
-    transition: all 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    cursor: pointer;
+    transition: background .12s, color .12s, border-color .12s;
 }
 
-.preset-btn:hover {
-    background: var(--fluent-neutral-fill-hover);
-    color: var(--fluent-neutral-foreground-rest);
-}
-
-.preset-btn.active {
+.view-btn:hover {
     background: var(--fluent-accent-fill-rest);
     border-color: var(--fluent-accent-fill-rest);
-    color: white;
+    color: #fff;
 }
 
-[data-theme="dark"] .preset-btn.active {
-    color: #0A0E1A;
-}
+/* Ozalit ve koyu temanın vurgu renkleri AÇIK tonlardır; üstlerine koyu yazı gerekir */
+[data-theme="dark"] .view-btn:hover,
+[data-theme="blueprint"] .view-btn:hover { color: #061220; }
 
 /* Zoom Controls */
 .zoom-controls-3d {
@@ -1918,8 +1861,10 @@ body.color-mode-3 .drawing-tools-title {
 }
 
 .shapes-list-container {
-    max-height: 180px;
+    /* Kartlar iki satır giriş alanı taşıdığı için liste yüksekliği buna göre */
+    max-height: 220px;
     overflow-y: auto;
+    overflow-x: hidden;
     background: var(--fluent-layer-fill-default);
     border: 1px solid var(--fluent-stroke-color-default);
     border-radius: 6px;
@@ -1953,29 +1898,50 @@ body.color-mode-3 .drawing-tools-title {
 
 .shape-name {
     font-weight: 600;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .shape-area {
     font-family: 'Consolas', monospace;
-    font-size: 12px;
+    font-size: 11px;
     opacity: 0.8;
 }
 
 /* === BURULMA: KESİT LİSTESİ (yarıçap + malzeme girişleri) === */
 .shape-item-torsion {
+    position: relative;
     flex-direction: column;
     align-items: stretch;
     gap: 6px;
 }
 
+/* Ad ile alan metni geniş panelde tek satıra sığar; 3B görünümde panel 240px'e
+   indiğinde alan metni kırpılmak yerine kendi satırına iner */
 .shape-head-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    flex-wrap: wrap;
+    row-gap: 2px;
+    column-gap: 6px;
+    min-width: 0;
+}
+
+.shape-head-row .shape-name {
+    flex: 1 1 auto;
+}
+
+/* Seçili satırda sil düğmesinin kapladığı köşe boş bırakılır */
+.shape-item.selected .shape-head-row {
+    padding-right: 24px;
 }
 
 .shape-head-row .shape-area {
     margin-left: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 .material-swatch {
@@ -1983,14 +1949,17 @@ body.color-mode-3 .drawing-tools-title {
     width: 14px;
     height: 14px;
     min-width: 14px;
+    flex: 0 0 auto;
     border-radius: 4px;
     border: 2px solid;
 }
 
+/* Üç giriş alanı (r_dış / r_iç / G) dar panelde tek satıra sığmıyor, etiket ve
+   birimler kutudan taşıyordu: iki sütun sabit, G alanı satırı tek başına kaplar */
 .shape-input-row {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
 }
 
 .shape-prop-field {
@@ -2001,15 +1970,21 @@ body.color-mode-3 .drawing-tools-title {
     border: 1px solid var(--fluent-stroke-color-default);
     border-radius: 4px;
     padding: 2px 6px;
-    flex: 1 1 0;
     min-width: 0;
+    overflow: hidden;
     cursor: default;
+}
+
+/* Tek başına kalan alan (G) satırın tamamını kaplar */
+.shape-prop-field-wide {
+    grid-column: 1 / -1;
 }
 
 .shape-prop-label {
     font-size: 11px;
     font-style: italic;
     white-space: nowrap;
+    flex: 0 0 auto;
     opacity: 0.85;
 }
 
@@ -2017,11 +1992,13 @@ body.color-mode-3 .drawing-tools-title {
     font-size: 10px;
     opacity: 0.6;
     white-space: nowrap;
+    flex: 0 0 auto;
+    margin-left: auto;
 }
 
 .shape-prop-field input[type="number"] {
     width: 100%;
-    min-width: 34px;
+    min-width: 0;
     border: none;
     outline: none;
     background: transparent;
@@ -2056,7 +2033,25 @@ body.color-mode-3 .drawing-tools-title {
     min-width: 0;
 }
 
+.torsion-band-info .shape-name {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 5px;
+    overflow: visible;
+}
+
+.torsion-band-info .shape-name > span {
+    white-space: nowrap;
+}
+
 .torsion-band-info .shape-area {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 10px;
+    line-height: 1.4;
+}
+
+.torsion-band-info .shape-area > span {
     white-space: nowrap;
 }
 
@@ -2069,8 +2064,13 @@ body.color-mode-3 .drawing-tools-title {
 
 .btn-delete-shape {
     display: none;
-    width: 24px;
-    height: 24px;
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    flex: 0 0 auto;
     border-radius: 50%;
     background: #FF4D4F;
     color: white;
@@ -2078,8 +2078,9 @@ body.color-mode-3 .drawing-tools-title {
     align-items: center;
     border: none;
     cursor: pointer;
-    margin-left: 8px;
-    font-size: 14px;
+    margin-left: 4px;
+    font-size: 13px;
+    line-height: 1;
     transition: transform 0.1s ease;
 }
 
@@ -2284,19 +2285,10 @@ body.color-mode-3 .popup-panel {
     border: 1px solid var(--fluent-stroke-color-default);
 }
 
-/* Görünüm küpü: beyaz yüzler, gri yazı */
-[data-theme="blueprint"] .viewcube-face {
-    background: var(--fluent-layer-fill-default);
-    border-color: var(--fluent-stroke-color-default);
-    color: var(--fluent-neutral-foreground-rest);
-}
-
 /* Ozalitin vurgu rengi (#7EC8E3) AÇIK bir mavidir; üstüne beyaz yazı okunmuyor.
    Koyu tema da aynı sebeple kendi vurgusunun üstüne koyu yazı koyar. */
-[data-theme="blueprint"] .preset-btn.active,
 [data-theme="blueprint"] .seg-btn.active,
-[data-theme="blueprint"] .shape-item.selected,
-[data-theme="blueprint"] .viewcube-face:hover {
+[data-theme="blueprint"] .shape-item.selected {
     color: #061220;
 }
 
@@ -2341,7 +2333,7 @@ body.color-mode-3 .popup-panel {
     cursor: pointer;
     font-size: 13px;
     font-weight: 500;
-    color: var(--fluent-neutral-foreground-hint) !important;
+    color: var(--fluent-neutral-foreground-rest) !important;
     border-radius: 6px;
     text-align: left;
     white-space: nowrap;
@@ -2349,14 +2341,14 @@ body.color-mode-3 .popup-panel {
     transition: background-color 0.2s ease, color 0.2s ease;
     font-family: "Segoe UI Variable", "Segoe UI", sans-serif;
 }
-[data-theme="blueprint"] .settings-menu-item { color: #BDD7EE !important; }
 .settings-menu-item:hover {
     background-color: var(--fluent-neutral-fill-hover);
     color: var(--fluent-neutral-foreground-rest) !important;
 }
 [data-theme="blueprint"] .settings-menu-item:hover { background-color: rgba(255,255,255,0.1) !important; color: #FFFFFF !important; }
-.settings-menu-item svg { flex-shrink: 0; opacity: 0.75; }
-.settings-menu-item:hover svg { opacity: 1; }
+/* Menü simgeleri metinle aynı güçte: soluk simge okunurluğu düşürüyordu */
+.settings-menu-item svg,
+.settings-submenu-item svg { flex-shrink: 0; }
 .settings-menu-item.has-submenu { position: relative; }
 .settings-submenu {
     position: absolute;
@@ -2379,13 +2371,14 @@ body.color-mode-3 .popup-panel {
     align-items: center;
     gap: 9px;
     width: 100% !important;
+    height: auto !important;   /* .language-switcher button'ın 28px'i sızıyor */
     padding: 7px 11px;
     border: none;
     background-color: transparent !important;
     cursor: pointer;
     font-size: 12.5px;
     font-weight: 500;
-    color: var(--fluent-neutral-foreground-hint);
+    color: var(--fluent-neutral-foreground-rest) !important;
     border-radius: 6px;
     text-align: left;
     white-space: nowrap;
@@ -2405,7 +2398,6 @@ body.color-mode-3 .popup-panel {
     margin-left: auto;
 }
 [data-theme="blueprint"] .settings-submenu { background-color: #0A1929; border-color: rgba(255,255,255,0.2); }
-[data-theme="blueprint"] .settings-submenu-item { color: #BDD7EE; }
 [data-theme="blueprint"] .settings-submenu-item:hover { background-color: rgba(255,255,255,0.1) !important; color: #FFFFFF !important; }
 #settings-menu-toggle-left {
     width: 32px;
