@@ -461,6 +461,59 @@ h3 {
     font-style: normal;
 }
 
+/* Metin etiketinin içindeki sembol (ör. "Birim dönme θ′"): dar panelde iki ayrı
+   etiket sığmadığı için ad ile sembol tek kutuda yazılır */
+.label-sym {
+    font-family: 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--fluent-neutral-foreground-rest);
+    /* Eğik glif kendi genişliğini taşar; pay verilmezse etiket iki piksel
+       yüzünden üç noktaya düşer */
+    padding-right: 3px;
+}
+
+/* Dar panelde (3B açıkken sağ panel 240 px'e iner) satır sığmazsa önce AD kısalır;
+   sayı hiçbir zaman kırpılmaz — okunması gereken şey sayıdır. */
+.result-box .input-group .text-label {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.input-group.readonly .value-readonly {
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+/* 3B açıkken sağ panel 280 → 240 px'e iner. En sıkışık satır birim dönme
+   açısıdır ("Birim dönme θ′  0.001910  rad/m"): tam boyutta beş piksel taşar,
+   bu yüzden dar modda ad ve aralıklar bir tık kısılır. */
+body.view-3d-active .result-box .input-group {
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
+body.view-3d-active .result-box .input-group .text-label {
+    font-size: 11px;
+    margin-right: 3px;
+}
+
+body.view-3d-active .result-box .input-group .label-sym {
+    font-size: 14px;
+}
+
+body.view-3d-active .result-box .input-group .unit-input {
+    margin-left: 3px;
+}
+
+/* Açı birimi seçimi sonuç kutusunun son satırıdır; alttaki boşluğu kapatır */
+.result-content .angle-unit-row {
+    margin-bottom: 0;
+}
+
 .unit-input {
     font-size: 13px;
     color: var(--fluent-neutral-foreground-hint);
@@ -587,6 +640,19 @@ input[type=range] {
     display: inline-block;
     width: 36px;
     height: 18px;
+}
+
+/* Kullanılamayan ayar bloğu: nedeni altındaki .panel-hint'te yazar */
+.controls-disabled {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+.panel-hint {
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--fluent-neutral-foreground-hint);
+    margin: -2px 0 8px;
 }
 
 /* --- ÇOKLU SEÇİM (toggle-row içinde, anahtar yerine) --- */
@@ -1237,6 +1303,124 @@ body.view-3d-active #right-panel {
     min-width: 200px;
 }
 
+/* --- ARAÇ ÇUBUĞUNDA PROFİL TİPİ MENÜSÜ --- */
+.tool-with-menu { position: relative; }
+
+/* Butonun altı seçilebilir bir liste olduğunu belli eden küçük üçgen */
+.tool-caret {
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-top: 4px solid currentColor;
+    opacity: 0.65;
+}
+
+.profile-kind-menu {
+    display: none;
+    position: absolute;
+    left: calc(100% + 6px);
+    top: 0;
+    z-index: 60;
+    min-width: 132px;
+    padding: 4px;
+    border-radius: 4px;
+    background: var(--fluent-layer-fill-default);
+    border: 1px solid var(--fluent-stroke-color-default);
+    box-shadow: var(--fluent-shadow-depth-16);
+}
+
+.profile-kind-menu.show { display: block; }
+
+.profile-kind-menu button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 5px 8px;
+    border: none;
+    border-radius: 3px;
+    background: none;
+    font-family: inherit;
+    font-size: 12px;
+    text-align: left;
+    color: var(--fluent-neutral-foreground-rest);
+    cursor: pointer;
+}
+
+.profile-kind-menu button:hover { background: var(--fluent-neutral-fill-hover); }
+.profile-kind-menu button.active { background: var(--fluent-accent-fill-rest); color: #fff; }
+[data-theme="dark"] .profile-kind-menu button.active { color: #0A0E1A; }
+
+/* --- İNCE CİDARLI PROFİL SATIRI --- */
+.profile-kind-select {
+    flex: 1;
+    min-width: 0;
+    font-family: inherit;
+    font-size: 12px;
+    padding: 2px 4px;
+    border: 1px solid var(--fluent-stroke-color-default);
+    border-radius: 3px;
+    background: var(--fluent-layer-fill-default);
+    color: var(--fluent-neutral-foreground-rest);
+}
+
+.profile-hint {
+    font-size: 10px;
+    line-height: 1.3;
+    color: var(--fluent-neutral-foreground-hint);
+    margin-top: 4px;
+}
+
+/* --- 3B GERİLME HARİTASI RENK ÖLÇEĞİ --- */
+.stress-legend-3d {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    background: var(--result-bg);
+    border: 1px solid var(--fluent-stroke-color-default);
+    pointer-events: none;
+}
+
+.stress-legend-title {
+    font-family: 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 12px;
+    color: var(--fluent-neutral-foreground-rest);
+}
+
+.stress-legend-body {
+    display: flex;
+    align-items: stretch;
+    gap: 5px;
+    height: 180px;
+}
+
+.stress-legend-bar {
+    width: 14px;
+    border: 1px solid var(--fluent-stroke-color-default);
+    /* Renk durakları script3d.js'te STRESS_COLORMAP'ten kurulur (tek kaynak) */
+}
+
+.stress-legend-ticks {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-family: 'Consolas', monospace;
+    font-size: 10px;
+    color: var(--fluent-neutral-foreground-hint);
+}
+
 /* --- 3D CONTROLS (AutoCAD Style) --- */
 .controls-3d {
     position: absolute;
@@ -1323,6 +1507,76 @@ body.view-3d-active #right-panel {
     border-radius: 0;
     margin: 0 !important;
     border: none;
+}
+
+/* --- 3B PICTURE-IN-PICTURE PANELİ ---
+   Model yüklenince veya boş kesite ilk eleman eklenince (tam 3B görünüm kapalıyken)
+   köşede küçük bir önizleme belirir. AYNI panel-3d/canvas3D kullanılır — yalnız
+   konum ve boyut değişir, ikinci bir WebGL bağlamı açılmaz. right/bottom middle-area'nın
+   padding kutusuna göre ölçülür; bu da center-panel'in kendi kenarına denk gelir. */
+#panel-3d.panel-3d-pip {
+    display: flex;
+    position: absolute;
+    right: 24px;
+    bottom: 24px;
+    width: 300px;
+    height: 210px;
+    flex: none;
+    margin: 0;
+    z-index: 40;
+    box-shadow: var(--fluent-shadow-depth-16);
+}
+
+/* PiP'te tek amaç 3B önizleme: viewcube, yakınlaştırma, açı/gerilme etiketleri
+   bu küçük kutuda sığmaz ve karışıklık yaratır — yalnız tuval, başlık ve iki tuş kalır. */
+#panel-3d.panel-3d-pip .controls-3d,
+#panel-3d.panel-3d-pip .info-3d,
+#panel-3d.panel-3d-pip .angle-display,
+#panel-3d.panel-3d-pip #stress3DLegend {
+    display: none !important;
+}
+
+/* Başlık küçük kutuda da sol üstte durur; sahne zemininin üstünde okunabilsin
+   diye çipli, ölçüsü kutuya göre küçültülmüş. Sağ üstteki iki tuşla çakışmaz. */
+#panel-3d.panel-3d-pip .panel-title {
+    top: 6px;
+    left: 8px;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background-color: var(--fluent-layer-fill-default);
+}
+
+.pip-3d-controls {
+    display: none;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    gap: 4px;
+    z-index: 45;
+}
+
+#panel-3d.panel-3d-pip .pip-3d-controls {
+    display: flex;
+}
+
+.pip-3d-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.pip-3d-btn:hover {
+    background: rgba(0, 0, 0, 0.75);
 }
 
 .zoom-btn-3d {
@@ -1502,6 +1756,209 @@ body.view-3d-active #right-panel {
 }
 
 /* --- Modal Styles --- */
+/* --- AÇILIŞ EKRANI --- */
+.startup-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;               /* onay modalının üstünde */
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.startup-dialog {
+    position: relative;
+    width: 100%;
+    max-width: 900px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 28px 32px 20px;
+    border-radius: 12px;
+    background: var(--fluent-layer-fill-default);
+    border: 1px solid var(--fluent-stroke-color-default);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+    color: var(--fluent-neutral-foreground-rest);
+}
+
+.startup-dialog h2 {
+    margin: 0;
+    text-align: center;
+    font-size: 22px;
+    color: var(--fluent-accent-fill-rest);
+}
+
+.startup-sub {
+    margin: 6px 0 20px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--fluent-neutral-foreground-hint);
+}
+
+.startup-close {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 4px;
+    background: none;
+    font-size: 20px;
+    line-height: 1;
+    color: var(--fluent-neutral-foreground-hint);
+    cursor: pointer;
+}
+
+.startup-close:hover { background: var(--fluent-neutral-fill-hover); }
+
+/* Büyük iki eylem: kesikli çerçeve */
+.startup-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.startup-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 22px 12px;
+    border: 2px dashed var(--fluent-stroke-color-default);
+    border-radius: 8px;
+    background: none;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--fluent-accent-fill-rest);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.startup-action:hover {
+    border-color: var(--fluent-accent-fill-rest);
+    background: var(--result-bg);
+}
+
+.startup-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--fluent-neutral-foreground-hint);
+}
+
+.startup-divider::before,
+.startup-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--fluent-stroke-color-default);
+}
+
+.startup-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 14px;
+}
+
+.startup-card {
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 10px;
+    border: 1px solid var(--fluent-stroke-color-default);
+    border-radius: 8px;
+    background: var(--fluent-layer-fill-default);
+    font-family: inherit;
+    text-align: left;
+    color: inherit;
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.startup-card:hover {
+    border-color: var(--fluent-accent-fill-rest);
+    box-shadow: var(--fluent-shadow-depth-16);
+    transform: translateY(-2px);
+}
+
+/* Görsel alanı sabit yükseklikte: kartlar aynı hizada dursun */
+.startup-thumb {
+    height: 104px;
+    padding: 6px;
+    background: var(--result-bg);
+    border-bottom: 1px solid var(--fluent-stroke-color-default);
+}
+
+.startup-thumb svg { display: block; height: 100%; }
+
+.startup-card-name {
+    margin: 8px 10px 2px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.startup-card-desc {
+    margin: 0 10px;
+    font-size: 11px;
+    color: var(--fluent-neutral-foreground-hint);
+}
+
+.startup-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 18px;
+    padding-top: 12px;
+    border-top: 1px solid var(--fluent-stroke-color-default);
+}
+
+.startup-langs { display: flex; gap: 4px; }
+
+.startup-langs button {
+    min-width: 30px;
+    padding: 3px 6px;
+    border: none;
+    border-radius: 4px;
+    background: none;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--fluent-neutral-foreground-hint);
+    cursor: pointer;
+}
+
+.startup-langs button:hover { background: var(--fluent-neutral-fill-hover); }
+
+.startup-langs button.active {
+    background: var(--fluent-accent-fill-rest);
+    color: #fff;
+}
+
+[data-theme="dark"] .startup-langs button.active { color: #0A0E1A; }
+
+.startup-hide {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--fluent-neutral-foreground-hint);
+    cursor: pointer;
+}
+
+@media (max-width: 620px) {
+    .startup-actions { grid-template-columns: 1fr; }
+    .startup-dialog { padding: 22px 16px 16px; }
+}
+
 .modal-overlay {
     position: fixed;
     top: 0;

@@ -29,15 +29,18 @@ const outputs = {
     valTauMax: document.getElementById('valTauMax'),
     valTauMin: document.getElementById('valTauMin'),
     valIp: document.getElementById('valIp'),
+    valIpPolar: document.getElementById('valIpPolar'),
     valWt: document.getElementById('valWt'),
     valGIp: document.getElementById('valGIp'),
-    valTheta: document.getElementById('valTheta')
+    valTheta: document.getElementById('valTheta'),
+    valPhi: document.getElementById('valPhi')
 };
 
 // Kontroller
 const controls = {
     cbAxes: document.getElementById('cbAxes'),
     cbStress: document.getElementById('cbStress'),
+    cbStressMap: document.getElementById('cbStressMap'),
     cbForceVector: document.getElementById('cbForceVector'),
     cbPartBorders: document.getElementById('cbPartBorders'),
     cbDimensions: document.getElementById('cbDimensions'),
@@ -56,11 +59,38 @@ const RAD2DEG = 180 / Math.PI;
 // Hesap modu: 'burulma'
 const calcMode = 'burulma';
 
+// İnce cidarlı profil (I/U/Z/T/L/kutu ve çok elemanlı kesit) ARAYÜZDE KAPALIDIR.
+// Kod olduğu gibi duruyor — hesap, geometri, gerilme alanı ve testler yerinde;
+// yalnızca kullanıcının bu kesitleri KURMASININ önü kapatılmıştır:
+//   · profil aracı ve tip menüsü gizlenir,
+//   · kesite ikinci bir dikdörtgen eklenemez (tek dikdörtgen kuralı geri gelir).
+// Dosyadan yüklenen çok elemanlı kesitler yine hesaplanır; eski projeler bozulmasın.
+// Yeniden açmak için tek yapılacak: bu sabiti true yapmak.
+const PROFILE_UI_ENABLED = false;
+
+// Çubuk boyu (mm). Yalnız 3B modelin uzunluğu değil, bağıl dönme açısının da
+// dayanağıdır (φ = θ′·L) → 3B kapalıyken de gerekli, bu yüzden script3d.js'te
+// değil burada durur. Otomatik boy kesitin 10 katıdır; kullanıcı bir değer
+// girene dek her hesapta yenilenir, alan boşaltılınca otomatiğe döner.
+let barLength = 500;
+let barLengthAuto = true;
+
+// Dönme açılarının gösterim birimi: teorinin doğal birimi radyandır, derece
+// yalnızca okuma kolaylığı için sunulur. Tercih oturumlar arasında korunur.
+let angleUnit = 'rad';   // 'rad' | 'deg'
+const ANGLE_UNIT_KEY = 'torsionAngleUnit';
+
 // Varsayılan kayma modülü (GPa) — çelik
 const DEFAULT_G = 80;
 
 // Gerilme diyagramının görsel ölçeği: τmak oku, dış yarıçapın bu katı kadar uzar
 const STRESS_DIAGRAM_REACH = 0.95;
+
+// Ekrana sığdırırken kesit tam ortaya değil, tuval yüksekliğinin bu kadarı kadar
+// YUKARIYA konur (alttaki durum çubuğu ve ölçü yazıları için pay). fitToScreen ile
+// constrainView bu sabiti PAYLAŞMAK ZORUNDADIR: sığdırmanın ürettiği kaydırma
+// kırpma sınırının dışında kalırsa çizim ilk yeniden boyutlandırmada zıplar.
+const FIT_VERTICAL_OFFSET = 0.05;
 
 // Gerilme oklarının dolu üçgen ucunun boyu (px)
 const STRESS_ARROW_HEAD = 12;
@@ -242,6 +272,7 @@ let calc = {
     // Dikdörtgen kesitte Saint-Venant sonuçları:
     // { w, h, a, b, q, alpha, beta, gamma, It, tauLong, tauShort, longIsHorizontal }
     rectInfo: null,
+    profileInfo: null,
     tauSecond: 0,     // Dikdörtgende kısa kenar ortasındaki gerilme (MPa)
 
     // Burulma
@@ -325,6 +356,11 @@ function setTheme(theme, shouldRedraw = true) {
             if (typeof draw === 'function') draw();
             if (typeof window.update3DVisualization === 'function') window.update3DVisualization();
             if (typeof window.update3DTheme === 'function') window.update3DTheme();
+            // Açılış kartları SVG'yi malzeme paletinden üretir: tema değişti, yenile
+            const su = document.getElementById('startupModal');
+            if (su && su.style.display !== 'none' && typeof renderStartupPresets === 'function') {
+                renderStartupPresets();
+            }
         }, 0);
     }
 }
@@ -455,6 +491,8 @@ function updateTorsionTitle() {
 // === BAŞLATMA ===
 function init() {
     initTheme();
+    initAngleUnit();
+    initStressScale();
 
     updateTorsionTitle();
     window.addEventListener('languageChanged', updateTorsionTitle);
@@ -488,7 +526,19 @@ function init() {
     setTimeout(() => {
         resizeCanvas();
         updateAll();
+        // Açılış ekranı tuval ölçüldükten SONRA: hazır model seçilince
+        // fitToScreen doğru canvas boyutuyla çalışsın
+        initStartupModal();
     }, 50);
+}
+
+function initAngleUnit() {
+    let stored = null;
+    try { stored = localStorage.getItem(ANGLE_UNIT_KEY); } catch (e) { /* özel mod */ }
+    angleUnit = (stored === 'deg') ? 'deg' : 'rad';
+    document.querySelectorAll('[data-angle-unit]').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-angle-unit') === angleUnit);
+    });
 }
 
 function resizeCanvas() {
@@ -575,6 +625,7 @@ function setupEventListeners() {
     if (btnRing) btnRing.addEventListener('click', () => setTool('ring'));
     const btnRect = document.getElementById('btnRect');
     if (btnRect) btnRect.addEventListener('click', () => setTool('rect'));
+    initProfileKindMenu();
 
     // Zoom butonları
     document.getElementById('btnZoomIn')?.addEventListener('click', () => applyZoom(1.2));
@@ -719,6 +770,11 @@ function setupEventListeners() {
 
     // Görselleştirme toggleları
     if (controls.cbAxes) controls.cbAxes.addEventListener('change', draw);
+    // Harita hem 2B tuvalini hem 3B gövdesini boyar: ikisi de yenilenmeli
+    if (controls.cbStressMap) controls.cbStressMap.addEventListener('change', () => {
+        updateStressScaleRow();
+        redrawStressScale();
+    });
     if (controls.cbStress) controls.cbStress.addEventListener('change', () => {
         updateStressModeRow();
         draw();
@@ -737,6 +793,45 @@ function setupEventListeners() {
             });
             draw();
         });
+    });
+
+    // Renk ölçeği: mod (otomatik / sabit), referans üst sınır ve rampa eğrisi
+    document.querySelectorAll('[data-stress-scale]').forEach(btn => {
+        btn.addEventListener('click', () => setStressScaleMode(btn.getAttribute('data-stress-scale')));
+    });
+    const tbRef = document.getElementById('tbStressRef');
+    if (tbRef) {
+        const applyRef = () => {
+            const v = parseFloat(tbRef.value);
+            if (!isFinite(v) || v <= 0) return;      // boş/sıfır alanda son değer korunur
+            stressRefTau = v;
+            saveStressScale();
+            redrawStressScale();
+        };
+        tbRef.addEventListener('input', applyRef);
+        tbRef.addEventListener('change', applyRef);
+    }
+    const tbGamma = document.getElementById('tbStressGamma');
+    if (tbGamma) {
+        const applyGamma = () => {
+            const v = parseFloat(tbGamma.value);
+            if (!isFinite(v) || v <= 0) return;
+            stressGamma = Math.max(STRESS_GAMMA_MIN, Math.min(STRESS_GAMMA_MAX, v));
+            saveStressScale();
+            redrawStressScale();
+        };
+        tbGamma.addEventListener('input', applyGamma);
+        tbGamma.addEventListener('change', applyGamma);
+    }
+
+    // Çubuk boyu — sağ paneldeki ve 3B ayarlarındaki alanlar aynı duruma bağlıdır
+    document.querySelectorAll('[data-bar-length]').forEach(el => {
+        el.addEventListener('change', () => applyBarLengthInput(el));
+    });
+
+    // Dönme açılarının birimi (radyan / derece)
+    document.querySelectorAll('[data-angle-unit]').forEach(btn => {
+        btn.addEventListener('click', () => setAngleUnit(btn.getAttribute('data-angle-unit')));
     });
 
     // Izgara aralığı
@@ -901,8 +996,19 @@ function updateStatus() {
         statusLabel.textContent = '⚠️ Dikdörtgen ve dairesel kesitler birlikte hesaplanamaz (farklı burulma teorileri).';
         return;
     }
-    if (calc.errorState === 'multiRect') {
-        statusLabel.textContent = '⚠️ Kesitte yalnızca bir dikdörtgen/kare bulunabilir.';
+    if (calc.errorState === 'profileDims') {
+        statusLabel.textContent = '⚠️ Profil ölçüleri tutarsız: cidarlar kesitin içine sığmalı ' +
+            '(tw < bf, 2·tf < bw; kutuda ayrıca 2·tw < bf).';
+        return;
+    }
+    if (calc.errorState === 'profileMaterial') {
+        statusLabel.textContent = '⚠️ Çok elemanlı kesitte bütün elemanlar aynı malzemeden ' +
+            'olmalı (aynı G). Çok malzemeli ince cidarlı profil desteklenmiyor.';
+        return;
+    }
+    if (calc.errorState === 'multiCell') {
+        statusLabel.textContent = '⚠️ Kapalı kesit tek ve DİKDÖRTGEN bir hücre olmalı ' +
+            '(Bredt–Batho tek hücre için çözülmüştür). Çok hücreli/düzensiz boşluk desteklenmiyor.';
         return;
     }
 
@@ -987,9 +1093,12 @@ function setRectSize(r, w, h) {
     r.y1 = d.cy - h / 2; r.y2 = d.cy + h / 2;
 }
 
-// Kesitte hangi model geçerli: dairesel kompozit mi, tek dikdörtgen mi?
+// Kesitte hangi model geçerli. Üç aile vardır ve birleştirilemezler:
+// dairesel kompozit, TEK dikdörtgen (kesin Saint-Venant serisi) ve ince cidarlı
+// profil (dikdörtgen elemanlardan; açıkta Σbt³/3, kapalıda Bredt–Batho).
 function sectionType() {
-    if (rectangles.length > 0) return 'rect';
+    if (rectangles.length > 1) return 'profile';
+    if (rectangles.length === 1) return 'rect';
     if (circles.length > 0) return 'circular';
     return 'empty';
 }
@@ -1013,11 +1122,75 @@ function shapeBounds(s) {
 // Yeni parça eklenebilir mi? Dairesel ve dikdörtgen modeller karışamaz;
 // dikdörtgen kesit tek parçadır (kompozit dikdörtgen için elemanter çözüm yoktur).
 function canAddPart(kind) {
-    return kind === 'rect' ? sectionIsEmpty() : rectangles.length === 0;
+    if (kind === 'profile') return PROFILE_UI_ENABLED && sectionIsEmpty();
+    if (kind === 'rect') {
+        // Profil arayüzü kapalıyken kesitte yalnızca bir dikdörtgen bulunabilir;
+        // açıkken elemanlar üst üste EKLENEBİLİR (kesit böyle kurulur).
+        return PROFILE_UI_ENABLED ? circles.length === 0 : sectionIsEmpty();
+    }
+    return rectangles.length === 0;   // dairesel parça: dikdörtgenle karışamaz
+}
+
+// Profil tipi ARAÇ SEÇİMİNDE belirlenir. Tip yalnız sağ paneldeki listede olsaydı
+// (ilk sürümde öyleydi) araç hep I bırakır, kullanıcı başka tip çizilemiyor sanır.
+let pendingProfileKind = 'I';
+
+function initProfileKindMenu() {
+    const btn = document.getElementById('btnProfile');
+    const menu = document.getElementById('profileKindMenu');
+    if (!btn || !menu) return;
+
+    if (!PROFILE_UI_ENABLED) {
+        // Buton kaldırılmaz, gizlenir: geri açmak sabiti çevirmekten ibaret olsun
+        const host = btn.closest('.tool-with-menu') || btn;
+        host.style.display = 'none';
+        return;
+    }
+
+    Object.keys(PROFILE_KINDS).forEach(k => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.dataset.kind = k;
+        b.textContent = PROFILE_KINDS[k].label;
+        b.addEventListener('click', (e) => {
+            e.stopPropagation();
+            pendingProfileKind = k;
+            menu.classList.remove('show');
+            markProfileKindMenu();
+            setTool('profile');
+            // Kesitte zaten hazır bir profil varsa tip değişikliği ona uygulanır;
+            // böylece kullanıcı yeniden yerleştirmek zorunda kalmaz
+            if (profileDef) {
+                profileDef.kind = k;
+                rebuildProfileRects();
+                updateAll();
+                updateShapesList();
+            }
+        });
+        menu.appendChild(b);
+    });
+    markProfileKindMenu();
+
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setTool('profile');
+        menu.classList.toggle('show');
+    });
+    document.addEventListener('click', () => menu.classList.remove('show'));
+}
+
+function markProfileKindMenu() {
+    document.querySelectorAll('#profileKindMenu button').forEach(b => {
+        b.classList.toggle('active', b.dataset.kind === pendingProfileKind);
+    });
 }
 
 function showPartConflict(kind) {
     if (!statusLabel) return;
+    if (kind === 'profile') {
+        statusLabel.textContent = '⚠️ Profil boş bir kesite yerleştirilir. Önce kesiti temizleyin.';
+        return;
+    }
     statusLabel.textContent = (kind === 'rect' && rectangles.length > 0)
         ? '⚠️ Kesitte yalnızca bir dikdörtgen/kare bulunabilir.'
         : '⚠️ Dikdörtgen ve dairesel kesitler birlikte hesaplanamaz (farklı burulma teorileri). Önce kesiti temizleyin.';
@@ -1144,6 +1317,17 @@ function onMouseDown(e) {
             isPanning = true;
             panStart = { x: e.clientX - viewState.panX, y: e.clientY - viewState.panY };
             canvas.style.cursor = 'grabbing';
+            return;
+        }
+
+        if (currentTool === 'profile') {
+            if (!canAddPart('profile')) { showPartConflict('profile'); return; }
+            const gp = snapToGrid(screenToGrid(x, y).x, screenToGrid(x, y).y);
+            profileDef = Object.assign({}, PROFILE_DEFAULTS,
+                { kind: pendingProfileKind, cx: gp.x, cy: gp.y });
+            rebuildProfileRects();
+            updateAll();
+            updateShapesList();
             return;
         }
 
@@ -1381,7 +1565,11 @@ function onMouseUp(e) {
                 Math.min(drawStart.x, drawEnd.x), Math.min(drawStart.y, drawEnd.y),
                 Math.max(drawStart.x, drawEnd.x), Math.max(drawStart.y, drawEnd.y)
             ));
+            // Elle eleman eklendi: kesit artık hazır profilin parametreleriyle
+            // tanımlı değil, elemanlarıyla tanımlı
+            profileDef = null;
             hesapla();
+            updateShapesList();
         }
         updateStatus();
         draw();
@@ -1434,14 +1622,20 @@ function applyZoom(delta) {
     draw();
 }
 
+// Kaydırma sınırı: dünyanın herhangi bir NOKTASI tuvalin MERKEZİNE getirilebilmeli.
+// Eski kural dünyanın KENARINI tuvalin KENARINA sabitliyordu; bu, dünyanın kıyısında
+// duran bir kesitin (örn. hazır modeller (0,0)'daydı) ortalanmasını imkânsız kılıyordu:
+// fitToScreen() doğru pan'i yazıyor, hemen ardından ilk resizeCanvas()→constrainView()
+// onu tam TUVAL YARISI kadar kırpıyor ve çizim köşeye fırlıyordu. İki fonksiyon artık
+// aynı sınırı paylaşır: fitToScreen()'in dünya içindeki bir kesit için ürettiği pan
+// hiçbir zaman kırpılmaz.
 function constrainView() {
-    const maxX = WORLD_SIZE_X;
-    const maxY = WORLD_SIZE_Y;
-
     const scale = viewState.zoom;
 
-    const maxPanX = Math.max(0, (maxX * scale - canvas.width) / 2);
-    const maxPanY = Math.max(0, (maxY * scale - canvas.height) / 2);
+    // Düşeyde sığdırmanın üst payı kadar ek serbestlik: dünyanın alt kıyısındaki
+    // bir kesitte fitToScreen bu kadar daha kaydırır, sınır onu kesmemelidir
+    const maxPanX = (WORLD_SIZE_X * scale) / 2;
+    const maxPanY = (WORLD_SIZE_Y * scale) / 2 + canvas.height * FIT_VERTICAL_OFFSET;
 
     viewState.panX = Math.max(-maxPanX, Math.min(maxPanX, viewState.panX));
     viewState.panY = Math.max(-maxPanY, Math.min(maxPanY, viewState.panY));
@@ -1659,16 +1853,276 @@ function fitToScreen() {
     const gridCenterY = WORLD_SIZE_Y / 2;
 
     viewState.panX = (sectionCenterX - gridCenterX) * currentScale;
-    const yOffset = -(canvas.height * 0.05);
+    const yOffset = -(canvas.height * FIT_VERTICAL_OFFSET);
     viewState.panY = -(sectionCenterY - gridCenterY) * currentScale + yOffset;
 
     draw();
+}
+
+// === AÇILIŞ EKRANI (HAZIR MODELLER) ===
+// Uygulama boş bir tuvalle açıldığında ne yapacağı belli olmuyordu. Açılışta bir
+// seçim ekranı çıkar: yeni model, dosya aç ya da hazır bir örnek.
+//
+// Örnekler burulmada birbirinden AYRI şeyleri gösterir (yalnız ölçü değişikliği
+// değil): dolu/boş kesitin verimi, ince cidarın etkisi, kompozitte ara yüzdeki
+// gerilme sıçraması, τmak'ın kesitin İÇİNDE kalabilmesi, dikdörtgende çarpılma
+// ve en/boy oranıyla değişen katsayılar.
+//
+// Kart görselleri SVG'dir ve MODELİN KENDİSİNDEN üretilir (`presetThumbSVG`);
+// elle çizilmiş resim olsaydı ölçüler değiştiğinde sessizce yalan söylerdi.
+
+const STARTUP_HIDE_KEY = 'torsionHideStartup';
+
+const STARTUP_PRESETS = [
+    {
+        id: 'solid',
+        name: 'Dolu Mil',
+        desc: 'Ø100 · çelik · T = 1.5 kNm',
+        torsion: '1.5',
+        circles: [{ cx: 0, cy: 0, r: 50, ri: 0, G: 80 }]
+    },
+    {
+        id: 'hollow',
+        name: 'İçi Boş Mil',
+        desc: 'Ø120/Ø60 · çelik · T = 1.5 kNm',
+        torsion: '1.5',
+        circles: [{ cx: 0, cy: 0, r: 60, ri: 30, G: 80 }]
+    },
+    {
+        id: 'thin',
+        name: 'İnce Cidarlı Boru',
+        desc: 'Ø120 · t = 6 mm · T = 1.5 kNm',
+        torsion: '1.5',
+        circles: [{ cx: 0, cy: 0, r: 60, ri: 54, G: 80 }]
+    },
+    {
+        id: 'composite',
+        name: 'Kompozit Mil',
+        desc: 'Çelik çekirdek + alüminyum kovan',
+        torsion: '2.0',
+        circles: [
+            { cx: 0, cy: 0, r: 60, ri: 40, G: 27 },
+            { cx: 0, cy: 0, r: 40, ri: 0, G: 80 }
+        ]
+    },
+    {
+        id: 'stiffcore',
+        name: 'Rijit Çekirdekli Mil',
+        desc: 'En büyük gerilme kesitin içinde',
+        torsion: '2.0',
+        circles: [
+            { cx: 0, cy: 0, r: 60, ri: 50, G: 10 },
+            { cx: 0, cy: 0, r: 50, ri: 0, G: 200 }
+        ]
+    },
+    {
+        id: 'triple',
+        name: 'Üç Malzemeli Mil',
+        desc: 'Ara yüzlerde gerilme sıçraması',
+        torsion: '2.0',
+        circles: [
+            { cx: 0, cy: 0, r: 60, ri: 40, G: 27 },
+            { cx: 0, cy: 0, r: 40, ri: 20, G: 80 },
+            { cx: 0, cy: 0, r: 20, ri: 0, G: 200 }
+        ]
+    },
+    {
+        id: 'square',
+        name: 'Kare Kesit',
+        desc: '100 × 100 · Saint-Venant',
+        torsion: '1.0',
+        rect: { x1: -50, y1: -50, x2: 50, y2: 50, G: 80 }
+    },
+    {
+        id: 'rect2',
+        name: 'Dikdörtgen Kesit',
+        desc: '40 × 80 (h/b = 2) · çarpılma',
+        torsion: '1.2',
+        rect: { x1: -20, y1: -40, x2: 20, y2: 40, G: 80 }
+    }
+];
+
+// Kart görseli: modelin kendi geometrisinden SVG. Renkler malzeme paletinden
+// gelir, böylece kart tuvaldeki kesitle aynı görünür ve temayla birlikte değişir.
+function presetThumbSVG(p) {
+    const W = 220, H = 120, PAD = 12;
+
+    // Sınırlayıcı kutu ve ölçek
+    let span;
+    if (p.rect) {
+        span = { w: p.rect.x2 - p.rect.x1, h: p.rect.y2 - p.rect.y1 };
+    } else {
+        const r = Math.max(...p.circles.map(c => c.r));
+        span = { w: 2 * r, h: 2 * r };
+    }
+    const s = Math.min((W - 2 * PAD) / span.w, (H - 2 * PAD) / span.h);
+    const cx = W / 2, cy = H / 2;
+
+    const parts = [];
+    if (p.rect) {
+        const mat = getMaterialColor(0);
+        const w = span.w * s, h = span.h * s;
+        parts.push(`<rect x="${(cx - w / 2).toFixed(1)}" y="${(cy - h / 2).toFixed(1)}" ` +
+            `width="${w.toFixed(1)}" height="${h.toFixed(1)}" ` +
+            `fill="${mat.fill}" stroke="${mat.stroke}" stroke-width="1.5"/>`);
+    } else {
+        // Halkalar dıştan içe çizilir: iç parça üste gelsin (tuvaldeki sırayla aynı)
+        p.circles.slice().sort((a, b) => b.r - a.r).forEach((c, i) => {
+            const idx = p.circles.indexOf(c);
+            const mat = getMaterialColor(idx);
+            const R = c.r * s, Ri = (c.ri || 0) * s;
+            if (Ri > 0.5) {
+                // Halka: dış daire CW + iç daire CCW → evenodd ile ortası boş kalır
+                parts.push(`<path d="M ${cx - R} ${cy} a ${R} ${R} 0 1 0 ${2 * R} 0 a ${R} ${R} 0 1 0 ${-2 * R} 0 ` +
+                    `M ${cx - Ri} ${cy} a ${Ri} ${Ri} 0 1 0 ${2 * Ri} 0 a ${Ri} ${Ri} 0 1 0 ${-2 * Ri} 0" ` +
+                    `fill="${mat.fill}" fill-rule="evenodd" stroke="${mat.stroke}" stroke-width="1.5"/>`);
+            } else {
+                parts.push(`<circle cx="${cx}" cy="${cy}" r="${R.toFixed(1)}" ` +
+                    `fill="${mat.fill}" stroke="${mat.stroke}" stroke-width="1.5"/>`);
+            }
+        });
+    }
+
+    // Burulma momenti yayı — tuvaldeki Mb işaretinin küçük karşılığı
+    const ar = Math.min(span.w, span.h) * s * 0.28 + 6;
+    const a1 = -0.55 * Math.PI, a2 = 1.15 * Math.PI;
+    const px = (a) => (cx + ar * Math.cos(a)).toFixed(1);
+    const py = (a) => (cy + ar * Math.sin(a)).toFixed(1);
+    parts.push(`<path d="M ${px(a1)} ${py(a1)} A ${ar.toFixed(1)} ${ar.toFixed(1)} 0 1 1 ${px(a2)} ${py(a2)}" ` +
+        `fill="none" stroke="${MOMENT_COLOR}" stroke-width="2.5" stroke-linecap="round"/>`);
+    // Ok ucu (yayın bitiş yönünde teğet)
+    const tx = cx + ar * Math.cos(a2), ty = cy + ar * Math.sin(a2);
+    const tang = a2 + Math.PI / 2, hl = 6;
+    parts.push(`<path d="M ${tx.toFixed(1)} ${ty.toFixed(1)} ` +
+        `L ${(tx - hl * Math.cos(tang - 0.4)).toFixed(1)} ${(ty - hl * Math.sin(tang - 0.4)).toFixed(1)} ` +
+        `L ${(tx - hl * Math.cos(tang + 0.4)).toFixed(1)} ${(ty - hl * Math.sin(tang + 0.4)).toFixed(1)} Z" ` +
+        `fill="${MOMENT_COLOR}"/>`);
+
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" ` +
+        `preserveAspectRatio="xMidYMid meet" role="img" aria-label="${p.name}">${parts.join('')}</svg>`;
+}
+
+// Modeli tuvale uygular. clearAll() zaten hesabı ve çizimi tazeliyor; burada
+// yalnız parçalar kurulup görünüm sığdırılır.
+function applyStartupPreset(p) {
+    clearAll();
+    // Modeller kendi merkezlerine göre (0,0) tanımlıdır; tuvale konurken DÜNYA
+    // MERKEZİNE taşınırlar — elle çizilen kesitler de oraya düşer (screenToGrid
+    // tuval merkezini WORLD_SIZE/2'ye eşler). Doğrudan (0,0)'a konsalardı kesit
+    // 2000×2000'lik dünyanın KÖŞESİNDE dururdu: eksenler, ölçü çizgileri ve
+    // gerilme diyagramı dünyanın dışına taşar, kesit ortalanamazdı.
+    const ox = WORLD_SIZE_X / 2, oy = WORLD_SIZE_Y / 2;
+    if (p.rect) {
+        rectangles.push(newRect(p.rect.x1 + ox, p.rect.y1 + oy, p.rect.x2 + ox, p.rect.y2 + oy));
+        rectangles[0].G = p.rect.G;
+    } else {
+        // Büyükten küçüğe eklenir: renk sırası ve eş merkezlilik kenetlenmesi
+        // tuvalde elle çizilmiş gibi olsun
+        p.circles.forEach(c => {
+            circles.push({
+                type: 'circle', cx: c.cx + ox, cy: c.cy + oy, r: c.r, ri: c.ri || 0,
+                G: c.G, colorIdx: (colorSeq++) % MATERIAL_COLOR_COUNT
+            });
+        });
+    }
+    if (inputs.tbTorsion) inputs.tbTorsion.value = p.torsion;
+
+    hesapla();
+    resizeCanvas();
+    fitToScreen();
+    updateShapesList();
+    if (calc.errorState === null && typeof show3DPip === 'function') show3DPip();
+}
+
+function shouldShowStartup() {
+    try { return localStorage.getItem(STARTUP_HIDE_KEY) !== '1'; } catch (e) { return true; }
+}
+
+function closeStartupModal() {
+    const m = document.getElementById('startupModal');
+    if (m) m.style.display = 'none';
+}
+
+function openStartupModal() {
+    const m = document.getElementById('startupModal');
+    if (!m) return;
+    renderStartupPresets();
+    m.style.display = 'flex';
+}
+
+function renderStartupPresets() {
+    const grid = document.getElementById('startupGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    STARTUP_PRESETS.forEach(p => {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'startup-card';
+        card.innerHTML =
+            '<div class="startup-thumb">' + presetThumbSVG(p) + '</div>' +
+            '<div class="startup-card-name"></div>' +
+            '<div class="startup-card-desc"></div>';
+        card.querySelector('.startup-card-name').textContent = p.name;
+        card.querySelector('.startup-card-desc').textContent = p.desc;
+        card.addEventListener('click', () => {
+            applyStartupPreset(p);
+            closeStartupModal();
+        });
+        grid.appendChild(card);
+    });
+}
+
+function initStartupModal() {
+    const m = document.getElementById('startupModal');
+    if (!m) return;
+
+    document.getElementById('startupNew').addEventListener('click', () => {
+        clearAll();
+        closeStartupModal();
+    });
+    document.getElementById('startupOpen').addEventListener('click', () => {
+        closeStartupModal();
+        const fi = document.getElementById('fileInput');
+        if (fi) fi.click();
+    });
+    document.getElementById('startupClose').addEventListener('click', closeStartupModal);
+
+    const cb = document.getElementById('startupHide');
+    if (cb) {
+        cb.addEventListener('change', () => {
+            try { localStorage.setItem(STARTUP_HIDE_KEY, cb.checked ? '1' : '0'); } catch (e) { /* özel mod */ }
+        });
+    }
+
+    // Dil düğmeleri: kart adları Türkçe sabit (burulmaya özgü metinler gibi),
+    // çerçeve metinleri data-i18n ile çevrilir
+    m.querySelectorAll('[data-startup-lang]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            setLanguage(btn.getAttribute('data-startup-lang'));
+            markStartupLang();
+        });
+    });
+    markStartupLang();
+    window.addEventListener('languageChanged', markStartupLang);
+
+    // Kartlar temaya bağlı renk kullandığından tema değişince yeniden çizilir
+    m.addEventListener('click', (e) => { if (e.target === m) closeStartupModal(); });
+
+    if (shouldShowStartup()) openStartupModal();
+}
+
+function markStartupLang() {
+    const cur = (typeof currentLanguage !== 'undefined') ? currentLanguage : 'tr';
+    document.querySelectorAll('[data-startup-lang]').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-startup-lang') === cur);
+    });
 }
 
 // === TEMİZLE ===
 function clearAll() {
     circles = [];
     rectangles = [];
+    profileDef = null;
     holes = [];
     isDrawing = false;
     ringDraft = null;
@@ -1687,9 +2141,13 @@ function buildProjectData() {
         circles: circles,
         rectangles: rectangles,
         gridSpacing: gridSpacing,
+        // Profil elemanları profileDef'ten üretilir; rectangles türetilmiş veridir
+        profile: profileDef ? Object.assign({}, profileDef) : null,
         viewState: viewState,
         inputs: {
-            tbTorsion: inputs.tbTorsion ? inputs.tbTorsion.value : '1.50'
+            tbTorsion: inputs.tbTorsion ? inputs.tbTorsion.value : '1.50',
+            // Otomatik moddayken yazılmaz: dosya açılınca kesitten yeniden kurulur
+            barLength: barLengthAuto ? null : barLength
         }
     };
 }
@@ -1729,6 +2187,108 @@ function openProject() {
     document.getElementById('fileInput').click();
 }
 
+// Proje verisini uygular. buildProjectData() gibi test edilebilir olsun diye
+// dosya okumadan ayrıldı; atlanan eleman sayısını döndürür.
+function loadProjectData(data) {
+    let skipped = 0;
+
+    // Daireleri yükle (yalnızca tam daireler desteklenir)
+    let loaded = [];
+    if (Array.isArray(data.circles)) {
+        data.circles.forEach((c, i) => {
+            const subtype = c.subtype || 'full';
+            if (subtype !== 'full' || !(c.r > 0)) { skipped++; return; }
+            loaded.push({
+                type: 'circle',
+                cx: c.cx, cy: c.cy, r: c.r,
+                ri: (typeof c.ri === 'number' && c.ri > 0 && c.ri < c.r) ? c.ri : 0,
+                G: (typeof c.G === 'number' && c.G > 0) ? c.G : DEFAULT_G,
+                colorIdx: (typeof c.colorIdx === 'number') ? c.colorIdx : (i % MATERIAL_COLOR_COUNT)
+            });
+        });
+    }
+
+    // Eski format: global daire boşluklarını eş merkezli halka iç yarıçapına dönüştür
+    if (Array.isArray(data.holes)) {
+        data.holes.forEach(h => {
+            if (h.type !== 'circle' || (h.subtype && h.subtype !== 'full')) { skipped++; return; }
+            const host = loaded.find(c =>
+                Math.abs(c.cx - h.cx) < 1e-6 && Math.abs(c.cy - h.cy) < 1e-6 && h.r < c.r
+            );
+            if (host) {
+                host.ri = Math.max(host.ri || 0, h.r);
+            } else {
+                skipped++;
+            }
+        });
+    }
+
+    // Dikdörtgen elemanlar (v2.1). Sayıları serbesttir — kesit ekleme
+    // yoluyla kurulur; yalnızca dairesel parçalarla birlikte olamazlar.
+    let loadedRects = [];
+    if (Array.isArray(data.rectangles)) {
+        data.rectangles.forEach((r, i) => {
+            const ok = ['x1', 'y1', 'x2', 'y2'].every(k => typeof r[k] === 'number');
+            if (!ok || Math.abs(r.x2 - r.x1) < 1e-9 || Math.abs(r.y2 - r.y1) < 1e-9) { skipped++; return; }
+            if (loaded.length > 0) { skipped++; return; }
+            loadedRects.push({
+                type: 'rect',
+                x1: Math.min(r.x1, r.x2), y1: Math.min(r.y1, r.y2),
+                x2: Math.max(r.x1, r.x2), y2: Math.max(r.y1, r.y2),
+                G: (typeof r.G === 'number' && r.G > 0) ? r.G : DEFAULT_G,
+                colorIdx: (typeof r.colorIdx === 'number') ? r.colorIdx : (i % MATERIAL_COLOR_COUNT)
+            });
+        });
+    }
+
+    circles = loaded;
+    rectangles = loadedRects;
+
+    // Profil varsa elemanları ondan yeniden üretilir; dosyadaki
+    // rectangles türetilmiş veridir, üzerine yazılır
+    profileDef = null;
+    const pf = data.profile;
+    if (pf && PROFILE_KINDS[pf.kind]) {
+        profileDef = {
+            kind: pf.kind,
+            bf: +pf.bf, bw: +pf.bw, tf: +pf.tf, tw: +pf.tw,
+            G: (typeof pf.G === 'number' && pf.G > 0) ? pf.G : DEFAULT_G,
+            cx: +pf.cx || 0, cy: +pf.cy || 0
+        };
+        circles = [];
+        rebuildProfileRects();
+        skipped = 0;
+    }
+
+    holes = [];
+    ringDraft = null;
+    colorSeq = loaded.length + loadedRects.length;
+    selectedElement = null;
+
+    if (data.gridSpacing) {
+        gridSpacing = data.gridSpacing;
+        const tbGridSize = document.getElementById('tbGridSize');
+        if (tbGridSize) tbGridSize.value = gridSpacing;
+    }
+    if (data.viewState) viewState = data.viewState;
+
+    if (data.inputs) {
+        if (data.inputs.tbTorsion !== undefined && inputs.tbTorsion) {
+            inputs.tbTorsion.value = data.inputs.tbTorsion;
+        }
+        // Eski dosyalarda alan yok → otomatik boy (kesitin 10 katı)
+        const savedLen = parseFloat(data.inputs.barLength);
+        barLengthAuto = !isFinite(savedLen);
+        if (!barLengthAuto) barLength = Math.max(0, savedLen);
+    }
+
+    updateAll();
+    updateShapesList();
+    if (!sectionIsEmpty() && calc.errorState === null && typeof show3DPip === 'function') show3DPip();
+
+    return skipped;
+}
+
 function handleFileSelect(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -1736,85 +2296,12 @@ function handleFileSelect(event) {
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
-            const data = JSON.parse(e.target.result);
-
-            let skipped = 0;
-
-            // Daireleri yükle (yalnızca tam daireler desteklenir)
-            let loaded = [];
-            if (Array.isArray(data.circles)) {
-                data.circles.forEach((c, i) => {
-                    const subtype = c.subtype || 'full';
-                    if (subtype !== 'full' || !(c.r > 0)) { skipped++; return; }
-                    loaded.push({
-                        type: 'circle',
-                        cx: c.cx, cy: c.cy, r: c.r,
-                        ri: (typeof c.ri === 'number' && c.ri > 0 && c.ri < c.r) ? c.ri : 0,
-                        G: (typeof c.G === 'number' && c.G > 0) ? c.G : DEFAULT_G,
-                        colorIdx: (typeof c.colorIdx === 'number') ? c.colorIdx : (i % MATERIAL_COLOR_COUNT)
-                    });
-                });
-            }
-
-            // Eski format: global daire boşluklarını eş merkezli halka iç yarıçapına dönüştür
-            if (Array.isArray(data.holes)) {
-                data.holes.forEach(h => {
-                    if (h.type !== 'circle' || (h.subtype && h.subtype !== 'full')) { skipped++; return; }
-                    const host = loaded.find(c =>
-                        Math.abs(c.cx - h.cx) < 1e-6 && Math.abs(c.cy - h.cy) < 1e-6 && h.r < c.r
-                    );
-                    if (host) {
-                        host.ri = Math.max(host.ri || 0, h.r);
-                    } else {
-                        skipped++;
-                    }
-                });
-            }
-
-            // Dikdörtgen/kare kesit (v2.1). Dairesel parçalarla birlikte
-            // hesaplanamadığı için yalnızca biri yüklenir.
-            let loadedRects = [];
-            if (Array.isArray(data.rectangles)) {
-                data.rectangles.forEach((r, i) => {
-                    const ok = ['x1', 'y1', 'x2', 'y2'].every(k => typeof r[k] === 'number');
-                    if (!ok || Math.abs(r.x2 - r.x1) < 1e-9 || Math.abs(r.y2 - r.y1) < 1e-9) { skipped++; return; }
-                    if (loadedRects.length > 0 || loaded.length > 0) { skipped++; return; }
-                    loadedRects.push({
-                        type: 'rect',
-                        x1: Math.min(r.x1, r.x2), y1: Math.min(r.y1, r.y2),
-                        x2: Math.max(r.x1, r.x2), y2: Math.max(r.y1, r.y2),
-                        G: (typeof r.G === 'number' && r.G > 0) ? r.G : DEFAULT_G,
-                        colorIdx: (typeof r.colorIdx === 'number') ? r.colorIdx : (i % MATERIAL_COLOR_COUNT)
-                    });
-                });
-            }
-
-            circles = loaded;
-            rectangles = loadedRects;
-            holes = [];
-            ringDraft = null;
-            colorSeq = loaded.length + loadedRects.length;
-            selectedElement = null;
-
-            if (data.gridSpacing) {
-                gridSpacing = data.gridSpacing;
-                const tbGridSize = document.getElementById('tbGridSize');
-                if (tbGridSize) tbGridSize.value = gridSpacing;
-            }
-            if (data.viewState) viewState = data.viewState;
-
-            if (data.inputs && inputs.tbTorsion) {
-                if (data.inputs.tbTorsion !== undefined) {
-                    inputs.tbTorsion.value = data.inputs.tbTorsion;
-                }
-            }
-
-            updateAll();
+            const skipped = loadProjectData(JSON.parse(e.target.result));
 
             if (skipped > 0) {
-                alert('Bilgi: Burulma modülü dairesel/halka kesitleri veya tek bir ' +
-                      'dikdörtgen/kare kesiti destekler (ikisi birlikte hesaplanamaz). ' +
-                      skipped + ' adet desteklenmeyen eleman atlandı.');
+                alert('Bilgi: Burulma modülü dairesel/halka kesitleri VEYA dikdörtgen ' +
+                      'elemanlardan kurulu kesitleri destekler (ikisi birlikte ' +
+                      'hesaplanamaz). ' + skipped + ' adet desteklenmeyen eleman atlandı.');
             }
 
             if (statusLabel) statusLabel.textContent = t('statusReady');
@@ -1878,6 +2365,11 @@ function updateShapesList() {
     const active = document.activeElement;
     if (active && list.contains(active)) {
         list.querySelectorAll('.shape-item').forEach(item => {
+            if (item.dataset.kind === 'profile') {
+                const areaEl = item.querySelector('.shape-area');
+                if (areaEl) areaEl.textContent = 'A = ' + formatNumber(calc.area) + ' mm²';
+                return;
+            }
             const idx = parseInt(item.dataset.index, 10);
             const isRect = item.dataset.kind === 'rect';
             const c = isRect ? rectangles[idx] : circles[idx];
@@ -1891,6 +2383,86 @@ function updateShapesList() {
     }
 
     list.innerHTML = '';
+
+    if (profileDef) {
+        const div = document.createElement('div');
+        div.className = 'shape-item shape-item-torsion';
+        div.dataset.kind = 'profile';
+
+        const mat = getMaterialColor(0);
+        const headRow = document.createElement('div');
+        headRow.className = 'shape-head-row';
+
+        const swatch = document.createElement('span');
+        swatch.className = 'material-swatch';
+        swatch.style.background = mat.fill;
+        swatch.style.borderColor = mat.stroke;
+
+        const sel = document.createElement('select');
+        sel.className = 'profile-kind-select';
+        Object.keys(PROFILE_KINDS).forEach(k => {
+            const o = document.createElement('option');
+            o.value = k;
+            o.textContent = PROFILE_KINDS[k].label;
+            if (k === profileDef.kind) o.selected = true;
+            sel.appendChild(o);
+        });
+        sel.addEventListener('change', () => {
+            profileDef.kind = sel.value;
+            pendingProfileKind = sel.value;
+            markProfileKindMenu();
+            rebuildProfileRects();
+            updateAll();
+            updateShapesList();
+        });
+
+        const areaSpan = document.createElement('span');
+        areaSpan.className = 'shape-area';
+        areaSpan.textContent = 'A = ' + formatNumber(calc.area) + ' mm²';
+
+        const del = document.createElement('button');
+        del.className = 'btn-delete-shape';
+        del.innerHTML = '×';
+        del.title = 'Sil';
+        del.onclick = (e) => {
+            e.stopPropagation();
+            profileDef = null;
+            rectangles.length = 0;
+            hesapla();
+            draw();
+            updateShapesList();
+        };
+
+        headRow.appendChild(swatch);
+        headRow.appendChild(sel);
+        headRow.appendChild(areaSpan);
+        headRow.appendChild(del);
+        div.appendChild(headRow);
+
+        const apply = (key) => (v) => {
+            profileDef[key] = v;
+            rebuildProfileRects();
+        };
+        const props = document.createElement('div');
+        props.className = 'shape-props';
+        props.appendChild(makeShapePropField('b<sub>f</sub>', profileDef.bf, 1, 1, apply('bf'), 'mm'));
+        props.appendChild(makeShapePropField('b<sub>w</sub>', profileDef.bw, 1, 1, apply('bw'), 'mm'));
+        props.appendChild(makeShapePropField('t<sub>f</sub>', profileDef.tf, 0.1, 0.5, apply('tf'), 'mm'));
+        props.appendChild(makeShapePropField('t<sub>w</sub>', profileDef.tw, 0.1, 0.5, apply('tw'), 'mm'));
+        props.appendChild(makeShapePropField('G', profileDef.G, 1, 1, apply('G'), 'GPa'));
+        div.appendChild(props);
+
+        const hint = document.createElement('div');
+        hint.className = 'profile-hint';
+        hint.textContent = profileIsClosed(profileDef)
+            ? 'Kapalı kesit: Bredt–Batho (τ = q/t, cidar boyunca sabit)'
+            : 'Açık kesit: J = (1/3)Σb·t³ (τ cidar kalınlığı boyunca doğrusal)';
+        div.appendChild(hint);
+
+        list.appendChild(div);
+        if (container) container.style.display = 'block';
+        return;
+    }
 
     circles.forEach((c, i) => {
         const div = document.createElement('div');
@@ -2132,6 +2704,368 @@ function getSectionBands() {
         .sort((a, b) => a.rOut - b.rOut);
 }
 
+// === İNCE CİDARLI PROFİLLER (AÇIK VE KAPALI) ===
+//
+// Kesit, DİKDÖRTGEN ELEMANLARDAN kurulur; elemanlar birbirine girmez (küt ek),
+// böylece alan ve atalet momentleri doğrudan toplanabilir. Geometri `rectangles`
+// dizisinde tutulur — çizim ve 3B yolları değişmeden çalışır — topoloji ise
+// `profileDef` içinde durur. Topolojiyi geometriden çıkarmaya çalışmak (kesişim
+// grafiği, delik arama) kırılgan olurdu: hangi elemanın hangisine bağlandığı ve
+// kesitin kapalı olup olmadığı burada TANIMLIDIR.
+//
+// Neden ayrı bir hesap ailesi:
+//   · Açık profilde burulma direnci ince şeritlerin toplamıdır, J = (1/3)Σ b·t³;
+//     τ cidar kalınlığı boyunca DOĞRUSALDIR, orta çizgide sıfır, yüzeyde en büyük.
+//   · Kapalı kesitte kesme akısı q çevrede sabittir (Bredt–Batho), τ = q/t cidar
+//     boyunca sabittir ve aynı dış ölçüde açık kesitten iki-üç mertebe büyük bir
+//     J verir. İki formülasyon birleştirilemez.
+//
+// Ölçüler referans figürdeki gibidir: bf = başlık genişliği, bw = toplam yükseklik,
+// tf = başlık kalınlığı, tw = gövde kalınlığı.
+
+const PROFILE_KINDS = {
+    I:   { label: 'I profil',       closed: false },
+    U:   { label: 'U profil',       closed: false },
+    Z:   { label: 'Z profil',       closed: false },
+    T:   { label: 'T profil',       closed: false },
+    L:   { label: 'L profil',       closed: false },
+    BOX: { label: 'Kutu (kapalı)',  closed: true }
+};
+
+const PROFILE_DEFAULTS = { kind: 'I', bf: 100, bw: 200, tf: 10, tw: 7, G: DEFAULT_G };
+
+// Kesitte bir profil varsa burada durur; yoksa null (daire/tek dikdörtgen yolu)
+let profileDef = null;
+
+function profileIsClosed(p) {
+    const k = PROFILE_KINDS[p && p.kind];
+    return !!(k && k.closed);
+}
+
+// Profilin dikdörtgen elemanları (grid koordinatlarında, örtüşmez).
+// cx, cy profilin sınırlayıcı kutusunun merkezidir.
+function profileRects(p) {
+    const { kind, bf: B, bw: H, tf, tw } = p;
+    const cx = p.cx || 0, cy = p.cy || 0;
+    const R = (x1, y1, x2, y2) => ({
+        type: 'rect',
+        x1: cx + x1, y1: cy + y1, x2: cx + x2, y2: cy + y2,
+        G: p.G, colorIdx: 0
+    });
+    const bx = B / 2, by = H / 2;
+
+    switch (kind) {
+        case 'I':
+            return [
+                R(-bx, by - tf, bx, by),                 // üst başlık
+                R(-bx, -by, bx, -by + tf),               // alt başlık
+                R(-tw / 2, -by + tf, tw / 2, by - tf)    // gövde
+            ];
+        case 'U':
+            // Gövde grid +x'te: ekranda x ters çevrildiğinden SOLDA görünür
+            return [
+                R(bx - tw, -by, bx, by),                 // gövde (tam boy)
+                R(-bx, by - tf, bx - tw, by),            // bir başlık
+                R(-bx, -by, bx - tw, -by + tf)           // diğer başlık
+            ];
+        case 'Z':
+            return [
+                R(-tw / 2, -by, tw / 2, by),             // gövde (ortada, tam boy)
+                R(tw / 2, by - tf, tw / 2 + (B - tw), by),          // üst başlık sağa
+                R(-tw / 2 - (B - tw), -by, -tw / 2, -by + tf)       // alt başlık sola
+            ];
+        case 'T':
+            return [
+                R(-bx, by - tf, bx, by),                 // başlık
+                R(-tw / 2, -by, tw / 2, by - tf)         // gövde
+            ];
+        case 'L':
+            // Düşey kol grid +x (ekranda sol), yatay kol grid +y (ekranda alt)
+            return [
+                R(bx - tw, -by, bx, by),                 // düşey kol
+                R(-bx, by - tf, bx - tw, by)             // yatay kol
+            ];
+        case 'BOX':
+            return [
+                R(-bx, by - tf, bx, by),                 // üst cidar
+                R(-bx, -by, bx, -by + tf),               // alt cidar
+                R(-bx, -by + tf, -bx + tw, by - tf),     // sol cidar
+                R(bx - tw, -by + tf, bx, by - tf)        // sağ cidar
+            ];
+        default:
+            return [];
+    }
+}
+
+// Ölçüler tutarlı mı: cidarlar kesitin içine sığmalı ve pozitif olmalı
+function profileIsValid(p) {
+    if (!p || !PROFILE_KINDS[p.kind]) return false;
+    if (!(p.bf > 0 && p.bw > 0 && p.tf > 0 && p.tw > 0)) return false;
+    if (p.tw >= p.bf) return false;
+    if (p.kind === 'BOX') return (2 * p.tf < p.bw) && (2 * p.tw < p.bf);
+    return 2 * p.tf < p.bw;
+}
+
+function rebuildProfileRects() {
+    rectangles.length = 0;
+    circles.length = 0;
+    if (profileDef) rectangles.push(...profileRects(profileDef));
+}
+
+// === ÇOK ELEMANLI KESİT: BİRLEŞİM AYRIŞTIRMASI ===
+// Kesit birden çok dikdörtgenden kurulabildiği için (ekleme yoluyla) elemanlar
+// ÖRTÜŞEBİLİR. Alan ve atalet momentleri bu yüzden doğrudan toplanamaz; birleşim
+// önce ayrık hücrelere ayrıştırılır: bütün x ve y kenarları sıralanır, ortaya
+// çıkan ızgaranın her hücresi ya tümüyle içeridedir ya da tümüyle dışarıda.
+// Hücreler dikdörtgen olduğundan katkıları kapalı formülle toplanır — sayısal
+// integrasyon yok, sonuç KESİN.
+
+function rectUnionCells() {
+    const xs = [], ys = [];
+    rectangles.forEach(r => {
+        xs.push(Math.min(r.x1, r.x2), Math.max(r.x1, r.x2));
+        ys.push(Math.min(r.y1, r.y2), Math.max(r.y1, r.y2));
+    });
+    const uniq = (a) => {
+        const s = a.slice().sort((p, q) => p - q);
+        const out = [];
+        s.forEach(v => { if (!out.length || Math.abs(v - out[out.length - 1]) > 1e-9) out.push(v); });
+        return out;
+    };
+    const X = uniq(xs), Y = uniq(ys);
+    if (X.length < 2 || Y.length < 2) return null;
+
+    const nx = X.length - 1, ny = Y.length - 1;
+    const inside = new Uint8Array(nx * ny);
+    for (let j = 0; j < ny; j++) {
+        const my = (Y[j] + Y[j + 1]) / 2;
+        for (let i = 0; i < nx; i++) {
+            const mx = (X[i] + X[i + 1]) / 2;
+            inside[j * nx + i] = rectangles.some(r =>
+                mx > Math.min(r.x1, r.x2) && mx < Math.max(r.x1, r.x2) &&
+                my > Math.min(r.y1, r.y2) && my < Math.max(r.y1, r.y2)) ? 1 : 0;
+        }
+    }
+    return { X, Y, nx, ny, inside };
+}
+
+// Birleşimin alan, ağırlık merkezi ve atalet momentleri (örtüşme bir kez sayılır)
+function rectUnionProps(cells) {
+    let A = 0, Sx = 0, Sy = 0;
+    const parts = [];
+    for (let j = 0; j < cells.ny; j++) {
+        const h = cells.Y[j + 1] - cells.Y[j], cy = (cells.Y[j] + cells.Y[j + 1]) / 2;
+        for (let i = 0; i < cells.nx; i++) {
+            if (!cells.inside[j * cells.nx + i]) continue;
+            const w = cells.X[i + 1] - cells.X[i], cx = (cells.X[i] + cells.X[i + 1]) / 2;
+            const a = w * h;
+            A += a; Sx += a * cx; Sy += a * cy;
+            parts.push({ a, w, h, cx, cy });
+        }
+    }
+    if (A <= 0) return { A: 0, gx: 0, gy: 0, Ix: 0, Iy: 0, Ixy: 0 };
+
+    const gx = Sx / A, gy = Sy / A;
+    let Ix = 0, Iy = 0, Ixy = 0;
+    parts.forEach(p => {
+        const dx = p.cx - gx, dy = p.cy - gy;
+        Ix += p.w * p.h * p.h * p.h / 12 + p.a * dy * dy;
+        Iy += p.h * p.w * p.w * p.w / 12 + p.a * dx * dx;
+        Ixy += p.a * dx * dy;                 // dikdörtgen hücrenin kendi Ixy'si sıfır
+    });
+    return { A, gx, gy, Ix, Iy, Ixy };
+}
+
+// Kesit KAPALI mı: birleşimin çevrelediği bir boşluk var mı? Izgara hücreleri
+// üzerinde dışarıdan taşma (flood fill) yapılır; dışarıya ulaşamayan boş hücreler
+// bir hücre (cell) oluşturur. Bredt–Batho tek hücreli ve DİKDÖRTGEN boşluk için
+// çözüldüğünden başka bir şey çıkarsa açıkça bildirilir.
+function detectClosedCell(cells) {
+    const { X, Y, nx, ny, inside } = cells;
+    const seen = new Uint8Array(nx * ny);
+    const stack = [];
+
+    // Kenardaki bütün boş hücreler "dışarı" sayılır
+    for (let i = 0; i < nx; i++) {
+        [0, ny - 1].forEach(j => { if (!inside[j * nx + i] && !seen[j * nx + i]) { seen[j * nx + i] = 1; stack.push([i, j]); } });
+    }
+    for (let j = 0; j < ny; j++) {
+        [0, nx - 1].forEach(i => { if (!inside[j * nx + i] && !seen[j * nx + i]) { seen[j * nx + i] = 1; stack.push([i, j]); } });
+    }
+    while (stack.length) {
+        const [i, j] = stack.pop();
+        [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([di, dj]) => {
+            const a = i + di, b = j + dj;
+            if (a < 0 || b < 0 || a >= nx || b >= ny) return;
+            const k = b * nx + a;
+            if (inside[k] || seen[k]) return;
+            seen[k] = 1; stack.push([a, b]);
+        });
+    }
+
+    const voidCells = [];
+    for (let j = 0; j < ny; j++) {
+        for (let i = 0; i < nx; i++) {
+            if (!inside[j * nx + i] && !seen[j * nx + i]) voidCells.push([i, j]);
+        }
+    }
+    if (!voidCells.length) return null;                  // açık kesit
+
+    let i1 = nx, i2 = -1, j1 = ny, j2 = -1;
+    voidCells.forEach(([i, j]) => {
+        i1 = Math.min(i1, i); i2 = Math.max(i2, i);
+        j1 = Math.min(j1, j); j2 = Math.max(j2, j);
+    });
+    // Boşluk tam olarak sınırlayıcı kutusunu doldurmuyorsa dikdörtgen değildir
+    // (ya da birden çok hücre vardır) → tek hücreli Bredt uygulanamaz
+    const full = (i2 - i1 + 1) * (j2 - j1 + 1);
+    if (voidCells.length !== full) return { multi: true };
+
+    return { x1: X[i1], x2: X[i2 + 1], y1: Y[j1], y2: Y[j2 + 1] };
+}
+
+// Her dikdörtgen eleman bir CİDARDIR: uzunluğu uzun kenarı, kalınlığı kısa kenarı.
+// Ek yerleri, o bölgeyi kaplayan elemana ait sayılır (mevcut orta çizgi kuralına
+// göre biraz güvenli tarafta kalır); kavis/köşe rijitliği ihmal edilir (η = 1).
+function rectWalls() {
+    return rectangles.map(r => {
+        const d = rectDims(r);
+        return { len: Math.max(d.w, d.h), t: Math.min(d.w, d.h), w: d.w, h: d.h, cx: d.cx, cy: d.cy };
+    });
+}
+
+// Bütün elemanlar aynı malzemeden mi? Çok malzemeli ince cidarlı profil kapsam
+// dışıdır (açıkta ΣG_i·J_i, kapalıda kesme akısı denklemi baştan kurulmalı).
+function rectsShareMaterial() {
+    if (rectangles.length < 2) return true;
+    const g0 = rectangles[0].G;
+    return rectangles.every(r => Math.abs((r.G || 0) - (g0 || 0)) < 1e-9);
+}
+
+// Elemanlar örtüşüyor mu (uyarı için; alan/atalet zaten birleşimden geliyor)
+function rectElementsOverlap() {
+    for (let i = 0; i < rectangles.length; i++) {
+        for (let j = i + 1; j < rectangles.length; j++) {
+            const a = rectDims(rectangles[i]), b = rectDims(rectangles[j]);
+            const ox = Math.min(a.cx + a.w / 2, b.cx + b.w / 2) - Math.max(a.cx - a.w / 2, b.cx - b.w / 2);
+            const oy = Math.min(a.cy + a.h / 2, b.cy + b.h / 2) - Math.max(a.cy - a.h / 2, b.cy - b.h / 2);
+            if (ox > 1e-9 && oy > 1e-9) return true;
+        }
+    }
+    return false;
+}
+
+// === ÇOK ELEMANLI KESİTİN ATALET MOMENTLERİ ===
+// Elemanlar örtüşebildiğinden birleşim ayrıştırmasından geçilir (bkz. rectUnionProps).
+// Z ve L'de Ixy sıfır DEĞİLDİR (simetri ekseni yok).
+function hesaplaAtaletProfil(cells) {
+    const p = cells ? rectUnionProps(cells) : { A: 0, gx: 0, gy: 0, Ix: 0, Iy: 0, Ixy: 0 };
+
+    calc.area = p.A;
+    calc.centroidX = p.gx; calc.centroidY = p.gy;
+    calc.Ix = p.Ix; calc.Iy = p.Iy; calc.Ixy = p.Ixy;
+
+    if (p.A <= 0) {
+        calc.xMin = 0; calc.xMax = 0; calc.yMin = 0; calc.yMax = 0;
+        return;
+    }
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    rectangles.forEach(r => {
+        minX = Math.min(minX, r.x1, r.x2); maxX = Math.max(maxX, r.x1, r.x2);
+        minY = Math.min(minY, r.y1, r.y2); maxY = Math.max(maxY, r.y1, r.y2);
+    });
+    calc.xMin = minX; calc.xMax = maxX; calc.yMin = minY; calc.yMax = maxY;
+}
+
+// === ÇOK ELEMANLI (İNCE CİDARLI) KESİTTE BURULMA ===
+// Kesit hazır bir profilden gelmiş olabilir ya da kullanıcı elemanları tek tek
+// EKLEYEREK kurmuş olabilir — hesap ikisini de aynı yoldan yapar, kaynak yalnızca
+// `rectangles`tır. Topoloji geometriden çıkarılır: birleşimin çevrelediği bir
+// boşluk varsa kesit kapalıdır (Bredt–Batho), yoksa açıktır (Σb·t³/3).
+function hesaplaBurulmaProfil() {
+    const cells = rectUnionCells();
+    hesaplaAtaletProfil(cells);
+
+    calc.sectionType = 'profile';
+    calc.rectInfo = null;
+    calc.tauSecond = 0;
+    calc.torsionBands = null;
+    calc.torsionRay = null;
+
+    const tInput = parseFloat(inputs.tbTorsion ? inputs.tbTorsion.value : 0) || 0;
+    calc.torsion = tInput * 1e6;                  // kNm → N·mm
+
+    const walls = rectWalls();
+    const G = walls.length
+        ? ((typeof rectangles[0].G === 'number' && rectangles[0].G > 0) ? rectangles[0].G : DEFAULT_G)
+        : DEFAULT_G;
+    const Gmpa = G * 1000;
+
+    const cell = cells ? detectClosedCell(cells) : null;
+    const closed = !!(cell && !cell.multi);
+
+    let J = 0, Wt = 0, q = 0, Am = 0;
+    if (closed) {
+        // Orta çizgi halkası: boşluk, komşu cidarların YARISI kadar dışa taşınır.
+        // Cidar kalınlıkları dış sınırlayıcı kutu ile boşluk arasındaki paylardır.
+        const tL = cell.x1 - calc.xMin, tR = calc.xMax - cell.x2;
+        const tB = cell.y1 - calc.yMin, tT = calc.yMax - cell.y2;
+        const Wm = (cell.x2 - cell.x1) + (tL + tR) / 2;
+        const Hm = (cell.y2 - cell.y1) + (tB + tT) / 2;
+        Am = Wm * Hm;
+        const ds_t = Wm / tT + Wm / tB + Hm / tL + Hm / tR;
+        J = (ds_t > 0) ? 4 * Am * Am / ds_t : 0;
+        q = (Am > 0) ? calc.torsion / (2 * Am) : 0;
+        const tMin = Math.min(tL, tR, tB, tT);
+        Wt = 2 * Am * tMin;                       // τmak = T/Wt (en İNCE cidarda)
+    } else {
+        walls.forEach(w => { J += w.len * Math.pow(w.t, 3); });
+        J /= 3;
+        const tMax = walls.length ? Math.max(...walls.map(w => w.t)) : 0;
+        Wt = (tMax > 0) ? J / tMax : 0;           // τmak = T·tmak/J = T/Wt
+    }
+
+    calc.Ip = J;                                  // panelde It olarak yazılır
+    calc.GIp = Gmpa * J;
+    const thetaPrime = (Gmpa * J > 1e-9) ? calc.torsion / (Gmpa * J) : 0;
+    calc.thetaPrime = thetaPrime;
+    calc.thetaDegPerM = thetaPrime * 1000 * RAD2DEG;
+    calc.Wt = Wt;
+
+    // Eleman başına gerilme. Açık kesitte τ kalınlık boyunca doğrusaldır ve
+    // yüzeyde G·θ′·t olur; kapalıda kesme akısı sabit olduğundan τ = q/t cidar
+    // boyunca değişmez. Kapalıda kalınlık, elemanın kendi kısa kenarıdır.
+    const elements = walls.map(w => {
+        const across = (w.w <= w.h) ? 'x' : 'y';
+        return {
+            t: w.t, across, w: w.w, h: w.h,
+            cx: w.cx - calc.centroidX,            // ağırlık merkezine göre
+            cy: w.cy - calc.centroidY,
+            tau: Math.abs(closed ? q / w.t : Gmpa * thetaPrime * w.t)
+        };
+    });
+
+    let tauMax = 0, tauMin = Infinity;
+    elements.forEach(e => {
+        if (e.tau > tauMax) tauMax = e.tau;
+        if (e.tau < tauMin) tauMin = e.tau;
+    });
+    calc.tauMax = tauMax * Math.sign(calc.torsion || 1);
+    // Açık kesitte orta çizgide τ = 0'dır; kapalıda en küçük değer en KALIN cidardadır
+    calc.tauMin = closed ? (isFinite(tauMin) ? tauMin : 0) : 0;
+
+    calc.profileInfo = {
+        closed, G, Gmpa, J, Wt, q, Am, elements,
+        multiCell: !!(cell && cell.multi),
+        overlap: rectElementsOverlap()
+    };
+
+    calc.rhoMax = Math.max(calc.xMax - calc.centroidX, calc.yMax - calc.centroidY);
+    calc.rhoMin = 0;
+    calc.maxStressPoint = null;
+    calc.minStressPoint = null;
+}
+
 // === DİKDÖRTGEN KESİTTE BURULMA (SAINT-VENANT) ===
 // Dairesel kesitten farklı olarak dikdörtgen kesit burulmada çarpılır; τ = T·ρ/Ip
 // geçerli değildir. Prandtl gerilme fonksiyonunun kesin seri çözümünden:
@@ -2251,6 +3185,7 @@ function rectWarpPsi(x, y, w, h) {
 function resetCalcResults() {
     calc.sectionType = 'empty';
     calc.rectInfo = null;
+    calc.profileInfo = null;
     calc.tauSecond = 0;
     calc.area = 0;
     calc.centroidX = 0; calc.centroidY = 0;
@@ -2275,7 +3210,23 @@ function resetCalcResults() {
     calc.minStressPoint = null;
 }
 
+// Kesit boştan geçerli bir kesite geçince (elle ilk parça eklenince ya da bir
+// model yüklenince) 3B önizlemeyi (PiP) tetikler; kesit boşalınca kapatır. Bunu
+// hesapla()'nın kendi 20 çağrı noktasına dağıtmak yerine tek bir sarmalayıcıda
+// tutmak, hesap mantığını (hesaplaCore) bu bildirimden ayrı tutar.
+let section3DShowable = false;
 function hesapla() {
+    hesaplaCore();
+    const empty = sectionIsEmpty();
+    if (empty) {
+        if (typeof hide3DPip === 'function') hide3DPip();
+    } else if (!section3DShowable && calc.errorState === null && typeof show3DPip === 'function') {
+        show3DPip();
+    }
+    section3DShowable = !empty && calc.errorState === null;
+}
+
+function hesaplaCore() {
     const fail = (state) => {
         calc.errorState = state;
         resetCalcResults();
@@ -2290,7 +3241,24 @@ function hesapla() {
     // Dairesel ve dikdörtgen kesit farklı burulma teorileriyle çözülür; aynı
     // kesitte birleştirilemezler (birinde kesit düzlem kalır, diğerinde çarpılır)
     if (rectangles.length > 0 && circles.length > 0) return fail('mixed');
-    if (rectangles.length > 1) return fail('multiRect');
+    if (profileDef && !profileIsValid(profileDef)) return fail('profileDims');
+    if (rectangles.length > 1 && !rectsShareMaterial()) return fail('profileMaterial');
+
+    // Birden çok dikdörtgen artık hata değil: kesit ekleme yoluyla kurulan ince
+    // cidarlı bir profildir. Kesişim/eş merkezlilik denetimleri yalnız dairesel
+    // aileye aittir.
+    if (rectangles.length > 1) {
+        calc.errorState = null;
+        hesaplaBurulmaProfil();
+        if (calc.profileInfo && calc.profileInfo.multiCell) return fail('multiCell');
+        updateOutputs();
+        updateStatus();
+        if (typeof window.update3DVisualization === 'function') {
+            window.update3DVisualization();
+        }
+        return;
+    }
+
     if (checkIntersectionExists()) return fail('overlap');
     if (!isConcentric()) return fail('concentric');
 
@@ -2546,15 +3514,94 @@ function hesaplaBurulma() {
     calc.minStressPoint = { x: calc.centroidX, y: calc.centroidY + rMin };
 }
 
+// === ÇUBUK BOYU VE AÇI BİRİMİ ===
+
+// Kesitin en büyük yatay/düşey açıklığı — otomatik çubuk boyunun dayanağı.
+// Hata durumunda calc sıfırlandığı için sınırlar doğrudan parçalardan okunur.
+function sectionMaxSpan() {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    circles.concat(rectangles).forEach(s => {
+        const b = shapeBounds(s);
+        if (b.xMin < minX) minX = b.xMin;
+        if (b.xMax > maxX) maxX = b.xMax;
+        if (b.yMin < minY) minY = b.yMin;
+        if (b.yMax > maxY) maxY = b.yMax;
+    });
+    if (!isFinite(minX)) return 0;
+    return Math.max(maxX - minX, maxY - minY);
+}
+
+// Otomatik moddayken boyu tazeler ve tüm çubuk boyu alanlarını eşler.
+// Alanlar odaktayken yazılmaz: kullanıcı rakam girerken değeri altından değişmesin.
+function syncBarLength() {
+    if (barLengthAuto) {
+        const span = sectionMaxSpan();
+        if (span > 0) barLength = span * 10;   // kesit boşken son boy korunur
+    }
+    document.querySelectorAll('[data-bar-length]').forEach(el => {
+        if (el === document.activeElement) return;
+        el.value = String(Math.round(barLength));
+    });
+}
+
+// Kullanıcı girişi: boş/geçersiz değer otomatiğe döndürür (bkz. barLengthAuto)
+function applyBarLengthInput(el) {
+    const v = parseFloat(el.value);
+    barLengthAuto = !isFinite(v);
+    if (!barLengthAuto) barLength = Math.max(0, v);
+    syncBarLength();
+    // change olayı ancak giriş bitince (blur/Enter) gelir; alanın kendisi de o an
+    // yazılabilir — boşaltılan alanda otomatik boy hemen görünsün diye gerekli,
+    // çünkü syncBarLength odaktaki alanı atlar
+    el.value = String(Math.round(barLength));
+    updateOutputs();
+    if (typeof window.update3DVisualization === 'function') {
+        window.update3DVisualization();
+    }
+}
+
+// rad → seçili birim
+function angleFactor() {
+    return angleUnit === 'deg' ? RAD2DEG : 1;
+}
+
+function angleUnitLabel() {
+    return angleUnit === 'deg' ? '°' : 'rad';
+}
+
+function setAngleUnit(unit) {
+    angleUnit = (unit === 'deg') ? 'deg' : 'rad';
+    try { localStorage.setItem(ANGLE_UNIT_KEY, angleUnit); } catch (e) { /* özel mod */ }
+    document.querySelectorAll('[data-angle-unit]').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-angle-unit') === angleUnit);
+    });
+    updateOutputs();
+    // 3B geometri değişmez, yalnız okuma alanları tazelenir
+    if (typeof updateDeformReadouts === 'function') updateDeformReadouts();
+}
+
 // === ÇIKTI GÜNCELLEME ===
 function updateOutputs() {
     // Moment dosyadan yüklenmiş veya başka yerden değişmiş olabilir
     syncTorsionSlider();
 
+    // Etiketlerin ve bazı satırların görünürlüğü kesit tipine bağlıdır
+    // Dikdörtgende ve profilde burulma atalet momenti (It) gösterilir; kutupsal
+    // atalet momenti bu ailelerde burulmayı yönetmez
+    const isRectSection = calc.sectionType === 'rect' || calc.sectionType === 'profile';
+
     // 1. Atalet momentleri
     if (outputs.valIx) outputs.valIx.textContent = formatNumber(calc.Ix);
     if (outputs.valIy) outputs.valIy.textContent = formatNumber(calc.Iy);
     if (outputs.valIxy) outputs.valIxy.textContent = formatNumber(calc.Ixy);
+
+    // Kutupsal atalet momenti (Ip = Ix + Iy) listenin dördüncü satırı olarak da
+    // yazılır. Dikdörtgende calc.Ip kutupsal değeri değil burulma atalet momentini
+    // (It) taşır, üstelik orada Ip burulmayı yönetmez — satır bu yüzden yalnız
+    // dairesel/halka kesitte açılır.
+    const rowIpPolar = document.getElementById('rowIpPolar');
+    if (rowIpPolar) rowIpPolar.style.display = isRectSection ? 'none' : 'flex';
+    if (outputs.valIpPolar) outputs.valIpPolar.textContent = formatNumber(calc.Ip);
 
     // 2. Geometrik özellikler
     if (outputs.valArea) outputs.valArea.textContent = formatNumber(calc.area);
@@ -2562,17 +3609,17 @@ function updateOutputs() {
     // 3. Burulma gerilmeleri
     // Dikdörtgende ikinci değer τ₂'dir (kısa kenar ortası); dairesel kesitte τmin
     // (en içteki malzemenin iç kenarı). Etiketler kesit tipine göre değişir.
-    const isRectSection = calc.sectionType === 'rect';
     if (outputs.valTauMax) outputs.valTauMax.textContent = calc.tauMax.toFixed(2);
     if (outputs.valTauMin) {
-        outputs.valTauMin.textContent = (isRectSection ? calc.tauSecond : (calc.tauMin || 0)).toFixed(2);
+        outputs.valTauMin.textContent =
+            (calc.sectionType === 'rect' ? calc.tauSecond : (calc.tauMin || 0)).toFixed(2);
     }
 
     const setLabel = (id, html) => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = html;
     };
-    setLabel('lblTauMin', isRectSection
+    setLabel('lblTauMin', calc.sectionType === 'rect'
         ? 'τ<span class="sub">2</span>' : 'τ<span class="sub">min</span>');
     setLabel('lblIp', isRectSection
         ? 'I<span class="sub">t</span>' : 'I<span class="sub">p</span>');
@@ -2587,9 +3634,22 @@ function updateOutputs() {
     if (outputs.valIp) outputs.valIp.textContent = formatNumber(calc.Ip);
     if (outputs.valWt) outputs.valWt.textContent = formatNumber(calc.Wt);
 
-    // 5. Burulma rijitliği ve birim dönme açısı
+    // 5. Burulma rijitliği, birim dönme açısı (θ′) ve bağıl dönme açısı (φ = θ′·L)
     if (outputs.valGIp) outputs.valGIp.textContent = formatNumber(calc.GIp / 1e9); // N·mm² → kNm²
-    if (outputs.valTheta) outputs.valTheta.textContent = calc.thetaDegPerM.toFixed(4);
+
+    syncBarLength();
+    const f = angleFactor();
+    // θ′ metrede yazılır (rad/mm okunmayacak kadar küçük), φ mutlak açıdır
+    if (outputs.valTheta) {
+        outputs.valTheta.textContent = formatAngle(calc.thetaPrime * 1000 * f);
+    }
+    if (outputs.valPhi) {
+        outputs.valPhi.textContent = formatAngle(calc.thetaPrime * barLength * f);
+    }
+    const unitTheta = document.getElementById('unitTheta');
+    if (unitTheta) unitTheta.textContent = angleUnitLabel() + '/m';
+    const unitPhi = document.getElementById('unitPhi');
+    if (unitPhi) unitPhi.textContent = angleUnitLabel();
 
     // 6. Malzeme bazında gerilmeler (kompozit kesit)
     const matList = document.getElementById('torsionMaterialList');
@@ -2660,24 +3720,38 @@ function updateStressModeRow() {
     row.style.display = (calc.sectionType === 'rect' && stressOn) ? 'flex' : 'none';
 }
 
+// 1.23×10⁴ biçimi — üst simge rakamlar, panelde de SVG'de de aynı görünsün diye
+function toSuperscriptExp(num, digits) {
+    const parts = num.toExponential(digits).split('e');
+    const mantissa = parseFloat(parts[0]);
+    const exponent = parseInt(parts[1]);
+
+    const superscripts = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
+    const expStr = exponent.toString().split('').map(d => {
+        if (d === '-') return '⁻';
+        return superscripts[parseInt(d)];
+    }).join('');
+
+    return mantissa.toFixed(digits) + '×10' + expStr;
+}
+
 function formatNumber(num) {
     if (!isFinite(num)) return '∞';
     if (Math.abs(num) < 0.01) return '0.00';
-    if (Math.abs(num) >= 1e6) {
-        const exp = num.toExponential(2);
-        const parts = exp.split('e');
-        const mantissa = parseFloat(parts[0]);
-        const exponent = parseInt(parts[1]);
-
-        const superscripts = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
-        const expStr = exponent.toString().split('').map(d => {
-            if (d === '-') return '⁻';
-            return superscripts[parseInt(d)];
-        }).join('');
-
-        return mantissa.toFixed(2) + '×10' + expStr;
-    }
+    if (Math.abs(num) >= 1e6) return toSuperscriptExp(num, 2);
     return num.toFixed(2);
+}
+
+// Dönme açıları radyanda çok küçük çıkar (tipik olarak 10⁻³ mertebesi);
+// formatNumber bunları 0.00'a yuvarlardı. Burada ondalık sayısı büyüklüğe göre
+// seçilir, böylece birim değişse de hep dört anlamlı basamak okunur.
+function formatAngle(num) {
+    if (!isFinite(num)) return '∞';
+    const a = Math.abs(num);
+    if (a < 1e-12) return '0.0000';
+    if (a >= 1e5 || a < 1e-4) return toSuperscriptExp(num, 3);
+    const dec = Math.min(8, Math.max(2, 3 - Math.floor(Math.log10(a))));
+    return num.toFixed(dec);
 }
 
 // === ÇİZİM FONKSİYONLARI ===
@@ -2828,6 +3902,11 @@ function draw() {
             try { drawPartBorders(); } catch (e) { console.error("drawPartBorders error:", e); }
         }
 
+        // Renk alanı: kesit dolgusunun üstüne, ok diyagramının altına
+        if (controls.cbStressMap && controls.cbStressMap.checked) {
+            try { drawStressMap(); } catch (e) { console.error("drawStressMap error:", e); }
+        }
+
         if (controls.cbStress && controls.cbStress.checked) {
             // Diyagramın opak zemini kesit dolgusunu ve konturunu örter:
             // dağılımın içinde kesit sınırları görünmez (referans figür)
@@ -2842,6 +3921,11 @@ function draw() {
     // altta kalanları örttüğü için bunlar diyagramdan sonra çizilir
     drawAxes();
     drawCentroid();
+
+    // Renk ölçeği tuvalin kenarındadır, kesitten bağımsız — en üstte kalır
+    if (shapesExist && controls.cbStressMap && controls.cbStressMap.checked) {
+        try { drawStressLegend(); } catch (e) { console.error("drawStressLegend error:", e); }
+    }
 
     // Boyutlandırma için önizleme şekli
     let previewShape = null;
@@ -3431,6 +4515,514 @@ function drawCentroid() {
     ctx.fillText('G', pos.x + 6, pos.y - 6);
 }
 
+// === ENKESİT GERİLME HARİTASI (RENK ALANI) ===
+// Kayma gerilmesi dağılımı, ok diyagramı yerine kesitin HER NOKTASINDAKİ
+// büyüklüğü renkle veren bir alan olarak da gösterilebilir: en küçük gerilme
+// mavi, en büyük kırmızı.
+//
+// Alan ekran değil GRID koordinatlarında bir doku (texture) olarak üretilir ve
+// ekrana ölçeklenerek basılır; böylece kaydırma/yakınlaştırma yeniden hesap
+// gerektirmez. Doku MOMENTTEN BAĞIMSIZDIR: τ ile τmak birlikte T ile orantılı
+// olduğundan normalize alan değişmez, T yalnızca ölçek çubuğunun sayılarını
+// değiştirir. Bu yüzden önbellek anahtarı yalnızca geometri ve G'lerdir.
+
+// Referans figürdeki skala: mavi → camgöbeği → (yeşil) → sarı → kırmızı. Bu dört
+// durak klasik "jet" skalasının uçları kırpılmış hâlidir; camgöbeği ile sarı
+// arasındaki doğrusal ara değer yeşili kendiliğinden verir.
+const STRESS_COLORMAP = [
+    [0,       0,   0, 255],
+    [1 / 3,   0, 255, 255],
+    [2 / 3, 255, 255,   0],
+    [1,     255,   0,   0]
+];
+
+function stressColorRGB(t) {
+    const u = isFinite(t) ? Math.max(0, Math.min(1, t)) : 0;
+    for (let i = 1; i < STRESS_COLORMAP.length; i++) {
+        const a = STRESS_COLORMAP[i - 1], b = STRESS_COLORMAP[i];
+        if (u <= b[0]) {
+            const f = (b[0] - a[0] > 0) ? (u - a[0]) / (b[0] - a[0]) : 0;
+            return [
+                Math.round(a[1] + (b[1] - a[1]) * f),
+                Math.round(a[2] + (b[2] - a[2]) * f),
+                Math.round(a[3] + (b[3] - a[3]) * f)
+            ];
+        }
+    }
+    const last = STRESS_COLORMAP[STRESS_COLORMAP.length - 1];
+    return [last[1], last[2], last[3]];
+}
+
+function stressColorCSS(t) {
+    const c = stressColorRGB(t);
+    return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+}
+
+// Skalanın uçları. τ her bantta ρ ile doğrusal olduğundan dairesel kesitte en
+// küçük ve en büyük değerler daima BANT KENARLARINDADIR. Panelin τmin'i (yalnız
+// en içteki kenar) burada yetmez: içteki malzeme çok rijitse alanın en küçüğü
+// dıştaki bandın iç kenarına düşer.
+// === RENK ÖLÇEĞİ AYARLARI ===
+// Ölçek modu, haritanın hangi ARALIĞA oturacağını belirler:
+//   'auto'  → kesitin KENDİ uçları (τmin..τmak). Dağılımın BİÇİMİ okunur; τ ile
+//             τmak birlikte ölçeklendiğinden renkler momentten bağımsızdır.
+//   'fixed' → 0..τ_ref (kullanıcının girdiği referans, örn. emniyet gerilmesi).
+//             Renkler gerilmenin MUTLAK şiddetini gösterir: moment büyüdükçe
+//             kesit maviden kırmızıya döner, τ_ref aşılınca kırmızıda doyar.
+// Gama ise rampanın EĞRİSİDİR (aralığı değil): t → t^γ. γ<1 düşük gerilme
+// bölgesindeki farkları, γ>1 yüksek gerilme bölgesindekileri ayırt eder.
+const STRESS_SCALE_KEY = 'torsionStressScale';
+const STRESS_GAMMA_MIN = 0.2, STRESS_GAMMA_MAX = 5;
+const STRESS_SPAN_EPS = 1e-12;
+let stressScaleMode = 'auto';
+let stressRefTau = 100;          // MPa — yalnız 'fixed' modda kullanılır
+let stressGamma = 1;
+
+// Harita 2B tuvali, ölçek çubuğunu ve 3B gövdeyi birlikte besler: ölçek ayarı
+// değişince üçü de yenilenmeli
+function redrawStressScale() {
+    draw();
+    if (typeof window.update3DVisualization === 'function') window.update3DVisualization();
+    if (typeof updateStress3DLegend === 'function') updateStress3DLegend();
+}
+
+// Referans üst sınır yalnız sabit ölçekte anlamlıdır; otomatik moddayken alan gizlenir
+function markStressScale() {
+    document.querySelectorAll('[data-stress-scale]').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-stress-scale') === stressScaleMode);
+    });
+    const row = document.getElementById('stressRefRow');
+    if (row) row.style.display = (stressScaleMode === 'fixed') ? 'flex' : 'none';
+}
+
+function setStressScaleMode(mode) {
+    stressScaleMode = (mode === 'fixed') ? 'fixed' : 'auto';
+    markStressScale();
+    saveStressScale();
+    redrawStressScale();
+}
+
+function saveStressScale() {
+    try {
+        localStorage.setItem(STRESS_SCALE_KEY,
+            JSON.stringify({ mode: stressScaleMode, ref: stressRefTau, gamma: stressGamma }));
+    } catch (e) { /* özel mod */ }
+}
+
+function initStressScale() {
+    try {
+        const s = JSON.parse(localStorage.getItem(STRESS_SCALE_KEY) || 'null');
+        if (s) {
+            if (s.mode === 'fixed' || s.mode === 'auto') stressScaleMode = s.mode;
+            if (isFinite(s.ref) && s.ref > 0) stressRefTau = s.ref;
+            if (isFinite(s.gamma) && s.gamma > 0) {
+                stressGamma = Math.max(STRESS_GAMMA_MIN, Math.min(STRESS_GAMMA_MAX, s.gamma));
+            }
+        }
+    } catch (e) { /* bozuk kayıt: varsayılanlarla devam */ }
+    const tbRef = document.getElementById('tbStressRef');
+    if (tbRef) tbRef.value = stressRefTau;
+    const tbGamma = document.getElementById('tbStressGamma');
+    if (tbGamma) tbGamma.value = stressGamma;
+    markStressScale();
+    updateStressScaleRow();
+}
+
+// Ölçek denetimleri yalnız harita açıkken anlamlıdır
+function updateStressScaleRow() {
+    const row = document.getElementById('stressScaleRow');
+    if (!row) return;
+    const on = controls.cbStressMap && controls.cbStressMap.checked;
+    row.style.display = on ? 'block' : 'none';
+}
+
+// Değer uzayında normalize edilmiş t'ye rampa eğrisini uygular. Ölçek çubuğu da
+// bunu kullanır ki çubuk, haritadaki gerçek renk dağılımını göstersin.
+function stressRampPos(t) {
+    const c = t < 0 ? 0 : (t > 1 ? 1 : t);
+    return stressGamma === 1 ? c : Math.pow(c, stressGamma);
+}
+
+// Ham |τ| → renk skalasındaki konum (0..1). Harita, ölçek çubuğu ve 3B köşe
+// renkleri TEK bu yoldan beslenir; üçü hiçbir zaman ayrışmasın diye.
+function stressColorPos(v, range) {
+    const r = range || stressFieldRange();
+    const span = r.vMax - r.vMin;
+    return stressRampPos(span > STRESS_SPAN_EPS ? (v - r.vMin) / span : 0);
+}
+
+function stressFieldRange() {
+    // Sabit ölçekte aralık kesitten değil kullanıcının referansından gelir;
+    // aşağıdaki bütün tüketiciler (doku, çubuk, 3B) kendiliğinden uyar
+    if (stressScaleMode === 'fixed') {
+        return { vMin: 0, vMax: Math.max(0, stressRefTau) };
+    }
+    if (calc.sectionType === 'rect') {
+        return { vMin: 0, vMax: Math.abs(calc.tauMax) };   // köşede ve merkezde τ = 0
+    }
+    if (calc.sectionType === 'profile' && calc.profileInfo) {
+        const taus = calc.profileInfo.elements.map(e => e.tau);
+        if (!taus.length) return { vMin: 0, vMax: 0 };
+        // Açıkta alan orta çizgide sıfırlanır; kapalıda en küçük değer en kalın cidardadır
+        return {
+            vMin: calc.profileInfo.closed ? Math.min(...taus) : 0,
+            vMax: Math.max(...taus)
+        };
+    }
+    const bands = calc.torsionBands;
+    if (!bands || !bands.length) return { vMin: 0, vMax: 0 };
+
+    let vMin = Infinity, vMax = 0;
+    bands.forEach(b => {
+        [Math.abs(b.tauIn), Math.abs(b.tauOut)].forEach(v => {
+            if (v < vMin) vMin = v;
+            if (v > vMax) vMax = v;
+        });
+    });
+    return { vMin: isFinite(vMin) ? vMin : 0, vMax };
+}
+
+// ρ hangi malzeme bandına düşer. Sınır KESİN sınanamaz: 3B'de dış yüzeyin
+// köşeleri tam sınırın üstündedir ve yarıçapı iki kaynaktan aşarlar —
+//   · cos/sin ile üretim: hypot(r·cosθ, r·sinθ) birkaç ulp taşar,
+//   · geometri konumları FLOAT32 saklanır: r = 60'ta taşma ~1.6e-6'ya çıkar.
+// Toleranssız arama bu köşeleri kesit DIŞI sayıyor, τ = 0 veriyor ve silindirin
+// yüzeyi kırmızı–mavi çizgili çıkıyordu. Pay Float32 nicelemesinin üstünde,
+// gerçek bir cidar/boşluk kalınlığının çok altında seçilir.
+const BAND_RADIUS_TOL = 1e-6;          // bağıl
+function bandAtRadius(bands, rho) {
+    if (!bands || !bands.length) return null;
+    const tol = BAND_RADIUS_TOL * Math.max(1, bands[bands.length - 1].rOut);
+    for (let i = 0; i < bands.length; i++) {
+        const b = bands[i];
+        if (rho >= b.rIn - tol && rho <= b.rOut + tol) return b;
+    }
+    return null;
+}
+
+// Profil elemanları örtüşmediğinden nokta tek bir elemana düşer (ya da kesit dışıdır)
+function profileElementAt(xRel, yRel) {
+    const info = calc.profileInfo;
+    if (!info) return null;
+    // Kenara tam oturan noktalar (yüzey köşeleri) dışarı düşmesin diye pay bırakılır
+    // (aynı Float32 gerekçesi, bkz. bandAtRadius)
+    const tol = BAND_RADIUS_TOL * Math.max(1, calc.rhoMax || 1);
+    for (let i = 0; i < info.elements.length; i++) {
+        const e = info.elements[i];
+        if (Math.abs(xRel - e.cx) <= e.w / 2 + tol && Math.abs(yRel - e.cy) <= e.h / 2 + tol) return e;
+    }
+    return null;
+}
+
+// Açık profilde τ cidar kalınlığı boyunca DOĞRUSALDIR: orta çizgide sıfır,
+// yüzeyde G·θ′·t. Kapalı kesitte kesme akısı sabit olduğundan τ = q/t cidar
+// boyunca değişmez — haritada bu fark doğrudan görünür.
+function profileShearAt(xRel, yRel) {
+    const e = profileElementAt(xRel, yRel);
+    if (!e) return 0;
+    if (calc.profileInfo.closed) return e.tau;
+    const n = (e.across === 'x') ? (xRel - e.cx) : (yRel - e.cy);
+    return e.tau * Math.min(1, 2 * Math.abs(n) / e.t);
+}
+
+// Kesit merkezine göre (x, y) noktasındaki kayma gerilmesi büyüklüğü (MPa).
+// Doku üretimi hız için toplu yollarını kullanır (bant taraması / ayrıştırılmış
+// seri); bu tekil sürüm 3B köşe renklendirmesi ve testler içindir.
+function sectionShearMagAt(x, y) {
+    if (calc.errorState) return 0;
+
+    if (calc.sectionType === 'profile') return profileShearAt(x, y);
+
+    if (calc.sectionType === 'rect' && calc.rectInfo) {
+        const t = rectTauVector(x, y, calc.rectInfo.w, calc.rectInfo.h);
+        return Math.abs(calc.rectInfo.gTheta) * Math.hypot(t.tx, t.ty);
+    }
+
+    const bands = calc.torsionBands || [];
+    const rho = Math.hypot(x, y);
+    const b = bandAtRadius(bands, rho);
+    return b ? Math.abs((b.G * 1000) * calc.thetaPrime * rho) : 0;
+}
+
+// Alan tümüyle sıfır mı (moment sıfır, ya da kapalı kesitte bütün cidarlarda aynı
+// τ)? Böyle bir alanda haritalanacak bir değişim yoktur: harita da ölçek de tek
+// renge iner. Sabit ölçekte aralık kesitten gelmediği için bu durum oluşmaz —
+// orada τ = 0 zaten skalanın mavi ucuna düşer.
+function stressFieldFlat() {
+    const { vMin, vMax } = stressFieldRange();
+    return !(vMax - vMin > STRESS_SPAN_EPS);
+}
+
+// Dokunun yeniden üretilmesini gerektiren tek şey geometri ve malzemelerdir —
+// doku NORMALİZE olduğundan momentten bağımsızdır. Tek istisna alanın tümüyle
+// SIFIR olması: o durumda harita tek renge iner ve bu, renkli dokuyla aynı
+// önbellek gözünü paylaşamaz. Bayrak anahtara girmezse moment sıfırlandığında
+// eski renkli doku basılmaya devam ediyor, 2B gökkuşağı gösterirken 3B (köşe
+// renkleri canlı hesaplanır) doğru şekilde tek renk kalıyordu.
+function stressFieldKey() {
+    const parts = [calc.sectionType, stressFieldFlat() ? 'z' : 'v', stressGamma];
+    // 'auto' modda alan normalize olduğundan momentten BAĞIMSIZDIR; 'fixed' modda
+    // üst sınır sabit olduğu için moment doğrudan renkleri değiştirir ve anahtara
+    // girmek zorundadır (τmak momentle doğru orantılıdır, vekil olarak yeter).
+    if (stressScaleMode === 'fixed') parts.push('f', stressRefTau, calc.tauMax);
+    circles.forEach(c => parts.push('c', c.cx, c.cy, c.r, c.ri || 0, c.G));
+    rectangles.forEach(r => parts.push('r', r.x1, r.y1, r.x2, r.y2, r.G));
+    return parts.join('|');
+}
+
+// Dokunun uzun kenarındaki texel sayısı. Dikdörtgende her texel iki seri toplamı
+// demektir; simetri sayesinde yalnız bir çeyrek hesaplanır (aşağıya bak).
+const STRESS_MAP_TEXELS = 256;
+
+// Dikdörtgen alanın IZGARADA hızlı hesabı. rectTauVector nokta başına 100 terimli
+// iki seri toplar; ızgarada bu ayrıştırılabilir çünkü toplamın her terimi u ile
+// v'ye ayrı ayrı bağlıdır:
+//     sx = Σ wn·P_n(u)·sin(nπv/h),   sy = Σ wn·Q_n(u)·cos(nπv/h)
+// P ve Q yalnız u'ya, trigonometrik çarpanlar yalnız v'ye bağlı → üstel/trig
+// çağrı sayısı (Nu·Nv·N) yerine ((Nu+Nv)·N) olur. Toplam matematiksel olarak
+// rectTauVector ile AYNIDIR (aynı taşma güvenli e^{-x} biçimi kullanılır);
+// örtüşme testle noktasal olarak doğrulanır.
+// (u, v) çekirdek yönelimindedir: h ≤ w olmalıdır. |τ| eksen takasında değişmez
+// (takas bileşenleri yer değiştirip işaret çevirir), bu yüzden büyüklük için
+// çekirdeği doğrudan çağırmak yeterlidir.
+function rectTauMagGrid(us, vs, w, h) {
+    const Nu = us.length, Nv = vs.length;
+    const sx = new Float64Array(Nu * Nv);
+    const sy = new Float64Array(Nu * Nv);
+    const P = new Float64Array(Nu), Q = new Float64Array(Nu);
+
+    for (let n = 1; n <= RECT_TAU_TERMS; n += 2) {
+        const A = n * Math.PI * w / (2 * h);
+        const e = 1 + Math.exp(-2 * A);
+        const wn = ((((n - 1) / 2) % 2 === 0) ? 1 : -1) / (n * n);
+
+        for (let i = 0; i < Nu; i++) {
+            const B = n * Math.PI * us[i] / h;
+            const p = Math.exp(B - A), m = Math.exp(-B - A);
+            P[i] = wn * (p + m) / e;
+            Q[i] = wn * (p - m) / e;
+        }
+        for (let j = 0; j < Nv; j++) {
+            const ang = n * Math.PI * vs[j] / h;
+            const sn = Math.sin(ang), cs = Math.cos(ang);
+            const row = j * Nu;
+            for (let i = 0; i < Nu; i++) {
+                sx[row + i] += P[i] * sn;
+                sy[row + i] += Q[i] * cs;
+            }
+        }
+    }
+
+    const C = 8 * h / (Math.PI * Math.PI);
+    const out = new Float64Array(Nu * Nv);
+    for (let j = 0; j < Nv; j++) {
+        const row = j * Nu, tv = -2 * vs[j];
+        for (let i = 0; i < Nu; i++) {
+            out[row + i] = Math.hypot(tv + C * sx[row + i], C * sy[row + i]);
+        }
+    }
+    return out;
+}
+
+let stressFieldCache = null;
+
+// Normalize (0..1) alanı RGBA dokuya yazar. Kesit dışında alfa = 0'dır: ekrana
+// basarken kırpma (clip) gerekmez — SVGContext'te clip desteklenmediğinden bu şart.
+function buildStressFieldTexture() {
+    const x0 = calc.xMin, x1 = calc.xMax, y0 = calc.yMin, y1 = calc.yMax;
+    const wGrid = x1 - x0, hGrid = y1 - y0;
+    if (!(wGrid > 0) || !(hGrid > 0)) return null;
+
+    const long = Math.max(wGrid, hGrid);
+    let NX = Math.max(2, Math.round(STRESS_MAP_TEXELS * wGrid / long));
+    let NY = Math.max(2, Math.round(STRESS_MAP_TEXELS * hGrid / long));
+    NX += NX % 2; NY += NY % 2;              // çeyrek simetrisi için çift olmalı
+
+    const range = stressFieldRange();
+
+    // Doku EKRAN yönünde üretilir: gridToScreen x'i ters çevirdiğinden texel i
+    // artarken grid x AZALIR. Böylece ekrana basarken ayna dönüşümü gerekmez.
+    const dx = wGrid / NX, dy = hGrid / NY;
+    const gxOf = (i) => x1 - (i + 0.5) * dx;
+    const gyOf = (j) => y0 + (j + 0.5) * dy;
+
+    const img = new ImageData(NX, NY);
+    const px = img.data;
+
+    const put = (i, j, v, inside) => {
+        const o = (j * NX + i) * 4;
+        if (!inside) { px[o + 3] = 0; return; }
+        const c = stressColorRGB(stressColorPos(v, range));
+        px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2]; px[o + 3] = 255;
+    };
+
+    if (calc.sectionType === 'rect' && calc.rectInfo) {
+        const info = calc.rectInfo;
+        const cx = calc.centroidX, cy = calc.centroidY;
+        const gT = Math.abs(info.gTheta);
+
+        // |τ| iki merkez ekseninde de simetriktir: τx(x,−y) = −τx(x,y) ve
+        // τy(x,−y) = τy(x,y) olduğundan büyüklük değişmez (y ekseni için de aynı).
+        // Bu yüzden yalnız bir çeyrek hesaplanır, kalanı yansıtılır (4× hız).
+        const qx = NX / 2, qy = NY / 2;
+        const xs = new Float64Array(qx), ys = new Float64Array(qy);
+        for (let i = 0; i < qx; i++) xs[i] = gxOf(i) - cx;
+        for (let j = 0; j < qy; j++) ys[j] = gyOf(j) - cy;
+
+        // Çekirdek seri h ≤ w ister; kısa kenar düşeyse eksenler takas edilir.
+        // |τ| takastan etkilenmez (bkz. rectTauVector), yalnız indis düzeni değişir.
+        const swap = info.h > info.w;
+        const M = swap ? rectTauMagGrid(ys, xs, info.h, info.w)
+                       : rectTauMagGrid(xs, ys, info.w, info.h);
+        const quad = new Float64Array(qx * qy);
+        for (let j = 0; j < qy; j++) {
+            for (let i = 0; i < qx; i++) {
+                quad[j * qx + i] = gT * (swap ? M[i * qy + j] : M[j * qx + i]);
+            }
+        }
+        // Doku kutusu dikdörtgenin kendisidir: her texel kesit içindedir
+        for (let j = 0; j < NY; j++) {
+            const mj = Math.min(j, NY - 1 - j);
+            for (let i = 0; i < NX; i++) {
+                const mi = Math.min(i, NX - 1 - i);
+                put(i, j, quad[mj * qx + mi], true);
+            }
+        }
+    } else if (calc.sectionType === 'profile') {
+        const cx = calc.centroidX, cy = calc.centroidY;
+        for (let j = 0; j < NY; j++) {
+            const y = gyOf(j) - cy;
+            for (let i = 0; i < NX; i++) {
+                const x = gxOf(i) - cx;
+                const e = profileElementAt(x, y);
+                put(i, j, e ? profileShearAt(x, y) : 0, !!e);
+            }
+        }
+    } else {
+        const bands = calc.torsionBands || [];
+        const cx = calc.centroidX, cy = calc.centroidY;
+        const th = Math.abs(calc.thetaPrime);
+        for (let j = 0; j < NY; j++) {
+            const y = gyOf(j) - cy;
+            for (let i = 0; i < NX; i++) {
+                const x = gxOf(i) - cx;
+                const rho = Math.hypot(x, y);
+                // Bantlar eş merkezli ve ayrıktır; aralarındaki boşluk kesit değildir
+                const b = bandAtRadius(bands, rho);
+                put(i, j, b ? (b.G * 1000) * th * rho : 0, !!b);
+            }
+        }
+    }
+
+    const tex = document.createElement('canvas');
+    tex.width = NX; tex.height = NY;
+    tex.getContext('2d').putImageData(img, 0, 0);
+    return { tex, x0, x1, y0, y1 };
+}
+
+function getStressFieldTexture() {
+    const key = stressFieldKey();
+    if (stressFieldCache && stressFieldCache.key === key) return stressFieldCache.data;
+    stressFieldCache = { key, data: buildStressFieldTexture() };
+    return stressFieldCache.data;
+}
+
+function drawStressMap() {
+    if (calc.errorState || sectionIsEmpty()) return;
+    const field = getStressFieldTexture();
+    if (!field) return;
+
+    // Doku ekran yönünde üretildiği için sol-üst köşe (x1, y0)'a karşılık gelir
+    const a = gridToScreen(field.x1, field.y0);
+    const b = gridToScreen(field.x0, field.y1);
+    const w = b.x - a.x, h = b.y - a.y;
+    if (!(w > 0) || !(h > 0)) return;
+
+    ctx.drawImage(field.tex, a.x, a.y, w, h);
+
+    // Harita dolguyu örttüğünden kontur yeniden çizilir
+    ctx.lineWidth = 1.5;
+    circles.forEach((c, i) => {
+        ctx.strokeStyle = shapeColor(c, i).stroke;
+        defineShapePath(ctx, c);
+        ctx.stroke();
+    });
+    rectangles.forEach((r, i) => {
+        ctx.strokeStyle = shapeColor(r, i).stroke;
+        defineShapePath(ctx, r);
+        ctx.stroke();
+    });
+}
+
+// Renk ölçeği (referans figürdeki düşey çubuk). İnce dilimlerle çizilir; hem
+// canvas hem SVGContext fillRect desteklediğinden dışa aktarımda da görünür.
+const LEGEND_SLICES = 96;
+
+function drawStressLegend() {
+    if (calc.errorState || sectionIsEmpty()) return;
+    const { vMin, vMax } = stressFieldRange();
+    const colors = getCanvasColors();
+
+    const barW = 16;
+    const barH = Math.max(120, Math.min(260, canvas.height * 0.45));
+    const barX = canvas.width - 74;
+    const barY = (canvas.height - barH) / 2;
+    if (barX < 60) return;                       // dar tuvalde ölçek çizilmez
+
+    ctx.save();
+
+    const TICKS = 5;
+    const tickText = (i) => (vMin + (vMax - vMin) * (i / (TICKS - 1))).toFixed(2);
+
+    // Geniş bir kesit ölçeğin altına girebilir; yazılar okunur kalsın diye
+    // etiketlerdeki gibi opak bir zemin serilir
+    ctx.font = '11px Arial';
+    let labelW = 0;
+    for (let i = 0; i < TICKS; i++) {
+        labelW = Math.max(labelW, ctx.measureText(tickText(i)).width);
+    }
+    ctx.fillStyle = colors.labelBg;
+    ctx.fillRect(barX - 7, barY - 26, barW + 20 + labelW, barH + 36);
+
+    // Üstte en büyük (kırmızı), altta en küçük (mavi). Alan tümüyle sıfırsa
+    // (moment yok) haritanın kendisi tek renktir; ölçek de öyle olmalı, yoksa
+    // hepsi 0.00 yazan bir gökkuşağı gösterirdi.
+    // Dilim rengi rampa eğrisinden geçirilir: çubuk, haritadaki GERÇEK renk
+    // dağılımını göstermeli (γ ≠ 1'de ortadaki renk ortadaki değere düşmez).
+    // Etiketler değer uzayında doğrusal kalır, eğrilik böylece okunur olur.
+    const flat = stressFieldFlat();
+    const sliceH = barH / LEGEND_SLICES;
+    for (let i = 0; i < LEGEND_SLICES; i++) {
+        ctx.fillStyle = stressColorCSS(flat ? 0 : stressRampPos(1 - (i + 0.5) / LEGEND_SLICES));
+        // Dilimler arasında saç teli boşluk kalmasın diye bir piksel bindirilir
+        ctx.fillRect(barX, barY + i * sliceH, barW, sliceH + 1);
+    }
+
+    ctx.strokeStyle = colors.textColor;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barW, barH);
+
+    ctx.fillStyle = colors.textColor;
+    ctx.font = '11px Arial';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+
+    for (let i = 0; i < TICKS; i++) {
+        const y = barY + barH * (1 - i / (TICKS - 1));
+        ctx.beginPath();
+        ctx.moveTo(barX + barW, y);
+        ctx.lineTo(barX + barW + 4, y);
+        ctx.stroke();
+        ctx.fillText(tickText(i), barX + barW + 7, y);
+    }
+
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = 'italic 12px "Times New Roman"';
+    ctx.fillText('τ (MPa)', barX, barY - 11);   // üst değerle çakışmayacak pay
+
+    ctx.restore();
+}
+
 // === BURULMA GERİLME DİYAGRAMI — DİKDÖRTGEN KESİT ===
 // Diyagram bir veya birkaç DOĞRU üzerine oturur (iki merkez ekseni ve/veya bir
 // köşegen). Çizim sırası kritik: opak zeminler, kesit dolgusunu ve konturunu
@@ -3745,6 +5337,9 @@ function drawRectStressDistribution() {
 }
 
 function drawStressDistribution() {
+    // Profilde ordinat diyagramı çizilmez: diyagram tek bir doğru üzerinde
+    // tanımlıdır, profilde dağılım cidar cidar ayrıdır. Gösterimi harita yapar.
+    if (calc.sectionType === 'profile') return;
     if (rectangles.length > 0) {
         drawRectStressDistribution();
         return;
@@ -4010,12 +5605,13 @@ function drawMomentVector() {
 
     // Burulma momenti etiketi (referans figür: Mb). Yayın sol-üst dışına konur;
     // merkezde ağırlık merkezi işareti (G) bulunduğu için oraya yazılmaz.
+    // Etiketin ARKA PLANI YOKTUR (kullanıcı isteği): yay dışına düştüğü için
+    // örtmesi gereken bir şey yok, opak kutu ise ızgarada leke gibi duruyordu.
     const labAng = 205 * DEG2RAD;
     drawSubscriptLabel('M', 'b', '',
         screenCenter.x + Math.cos(labAng) * screenRadius * 1.45,
         screenCenter.y + Math.sin(labAng) * screenRadius * 1.45, {
         align: 'center',
-        box: getCanvasColors().labelBg,
         color: MOMENT_COLOR,
         mainFont: 'italic bold 16px "Times New Roman"',
         subFont: 'italic bold 11px "Times New Roman"',
@@ -4254,7 +5850,21 @@ class SVGContext {
 
     clip() {}
     createPattern() { return null; }
-    drawImage() {}
+
+    // Gerilme haritası bir canvas dokusu olarak basılır. Kesit dışında alfa = 0
+    // olduğundan kırpma gerekmez (clip burada zaten desteklenmiyor); doku gömülü
+    // PNG olarak yazılır. image-rendering serbest bırakılır ki geçişler yumuşasın.
+    drawImage(src, dx, dy, dw, dh) {
+        if (!src || typeof src.toDataURL !== 'function') return;
+        if (!(dw > 0) || !(dh > 0)) return;
+        const p = this.transformPoint(dx, dy);
+        const data = src.toDataURL();
+        this.elements.push(
+            `<image x="${p.x}" y="${p.y}" width="${dw * this.currentTransform.scaleX}" ` +
+            `height="${dh * this.currentTransform.scaleY}" preserveAspectRatio="none" ` +
+            `opacity="${this.currentStyle.globalAlpha}" href="${data}" xlink:href="${data}" />`
+        );
+    }
 
     ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterClockwise) {
         this.arc(x, y, radiusX, startAngle, endAngle, counterClockwise);
@@ -4374,7 +5984,7 @@ class SVGContext {
 
     getSerializedSvg() {
         return `
-<svg xmlns="http://www.w3.org/2000/svg" width="${this.width}" height="${this.height}" viewBox="0 0 ${this.width} ${this.height}" style="background-color: #fff">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${this.width}" height="${this.height}" viewBox="0 0 ${this.width} ${this.height}" style="background-color: #fff">
     <!-- Created by Vetin -->
     ${this.elements.join('\n')}
 </svg>

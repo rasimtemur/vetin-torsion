@@ -48,7 +48,8 @@ Beyond homogeneous sections, the application solves **composite shafts** consist
 |------|-------------|
 | **Circle** | Add a solid circular region (drag from centre outwards) |
 | **Ring** | Add an annular region with three clicks: the centre, then either of the two diameters, then the other (the larger becomes the outer radius) |
-| **Rectangle** | Add a solid rectangular region by dragging corner to corner; hold *Shift* for a square. One rectangle per section, and not combinable with circular parts |
+| **Rectangle** | Add a solid rectangular region by dragging corner to corner; hold *Shift* for a square. One rectangle per section (see the note under **Thin-walled sections**), and not combinable with circular parts |
+| **Profile** *(disabled)* | Place a ready-made **thin-walled profile**. Clicking the tool opens a list — I, channel (U), Z, T, angle (L) or a closed box — and the chosen one is placed on the next click. It is generated from *b*<sub>f</sub>, *b*<sub>w</sub>, *t*<sub>f</sub>, *t*<sub>w</sub>, editable in the section list along with *G*; adding a further element by hand turns it into an ordinary assembly |
 
 New circular parts automatically **snap to the common centre** of the existing section, so composite sections are always concentric — a requirement of the theory (see [Assumptions](#-theory-assumptions-and-limitations)). In **Edit** mode radii and rectangle edges can be adjusted by dragging handles, and the whole section can be repositioned. Each part's dimensions (*r*<sub>o</sub>, *r*<sub>i</sub> for circular parts; *b*, *h* for a rectangle) and its shear modulus *G* can also be edited numerically in the section list.
 
@@ -56,42 +57,62 @@ New circular parts automatically **snap to the common centre** of the existing s
 
 **Section properties** (exact, closed-form — no numerical integration):
 - *A* — net cross-sectional area
-- *I*<sub>x</sub>, *I*<sub>y</sub>, *I*<sub>xy</sub> — centroidal second moments of area
+- *I*<sub>x</sub>, *I*<sub>y</sub>, *I*<sub>xy</sub> — centroidal second moments of area; for a **circular or annular** section the polar moment *I*<sub>p</sub> is listed with them as well, where the reader can check it against *I*<sub>p</sub> = *I*<sub>x</sub> + *I*<sub>y</sub> on the spot. The row is omitted for a rectangle, where the polar moment is not what governs torsion
 - *I*<sub>p</sub> (circular) or *I*<sub>t</sub> (rectangular) — the **torsion constant** of the section
 - *W*<sub>t</sub> — torsional section modulus (*I*<sub>p</sub>/ρ<sub>max</sub> for a circular section, α·*a*·*b*² for a rectangle); for a **homogeneous** section τ<sub>max</sub> = *T*/*W*<sub>t</sub>, whereas in a composite shaft the stress follows from *G*<sub>i</sub>·θ′·ρ and *W*<sub>t</sub> remains a purely geometric quantity
 
-**Torsional response** for an applied torque *T*:
-- Σ*G*·*I*<sub>p</sub> (circular) or *G*·*I*<sub>t</sub> (rectangular) — torsional rigidity of the section
-- θ — rate of twist (°/m)
+**Torsional response** for an applied torque *T*, grouped into two panels — *Kayma Gerilmeleri* (shear stresses) and *Deplasmanlar* (displacements):
 - τ<sub>max</sub>, and τ<sub>min</sub> (circular, at the bore) or τ<sub>2</sub> (rectangular, at the midpoint of the short side)
 - Per-material stresses τ<sub>in</sub>, τ<sub>out</sub> at the inner and outer radii of each ring
+- Σ*G*·*I*<sub>p</sub> (circular) or *G*·*I*<sub>t</sub> (rectangular) — torsional rigidity of the section
+- θ′ — **rate of twist**, the rotation per unit length (per metre)
+- φ = θ′·*L* — **relative rotation** of the two ends of a bar of length *L*
 
-For a rectangular section the result panel switches its labels to the quantities that actually govern it: **I<sub>t</sub>**, **W<sub>t</sub>**, **G·I<sub>t</sub>** and **τ<sub>2</sub>**. The distinction matters: for a non-circular section the polar moment *I*<sub>p</sub> is **not** the torsion constant, and displaying it would be misleading.
+*L* is entered in the *Deplasmanlar* panel and is the same bar length the 3D view extrudes: the two input fields mirror each other. Left empty it follows the section automatically (ten times the largest section dimension); typing a value pins it until the field is cleared again.
+
+Angles are reported in **radians by default** — the natural unit of the theory, and the one in which θ′·*L* is a pure number — with a *Radyan / Derece* switch that converts both quantities to degrees. The choice is remembered between sessions and the 3D panel's true end-rotation readout follows it.
+
+For a rectangular section the result panel switches its labels to the quantities that actually govern it: **I<sub>t</sub>**, **W<sub>t</sub>**, **G·I<sub>t</sub>** and **τ<sub>2</sub>**, and it drops the *I*<sub>p</sub> row from the moments-of-inertia list. The distinction matters: for a non-circular section the polar moment *I*<sub>p</sub> is **not** the torsion constant, and displaying it would be misleading.
 
 ### Graphical Output
 
 - Colour-coded materials (each part drawn in its own material colour). Each of the three themes — light, dark and blueprint — carries its **own** palette rather than reusing the light pastels, which washed out on a dark canvas and clashed with blueprint's blue paper. The palettes are anchored to the 3D view: a theme's first material colour *is* the 3D bar colour, and the 2D canvas background *is* the 3D scene background, so the same section reads the same in both panels
+- **Stress map in 3D** — the same colour field is painted onto the extruded member, driven by the same toggle and the same scale, with its own colour bar beside the 3D view. It is applied as **vertex colours** written before the twist deformation, so the colours travel with the section as it rotates. Because a vertex colour is only visible where a vertex exists, switching the map on also subdivides the section outline and replaces the extruded end caps with a subdivided surface — an unsubdivided rectangle has vertices only at its four corners, where τ = 0, and its whole lateral face would come out blue
+- **Stress map** — *Gerilme Haritası* fills the cross-section with a **colour field**: every point is tinted by the magnitude |τ| there, blue at the smallest value rising through cyan, green and yellow to red at the largest, with a labelled colour bar beside the drawing. It shows the whole two-dimensional distribution at once — the saddle-shaped field of a rectangle, the radial gradient of a shaft, and the **step at a material interface** in a composite, which a line diagram can only report at two points. The field is exact, not interpolated from samples: circular sections use τ = *G*<sub>i</sub>·θ′·ρ and rectangles the same Saint-Venant series that produces τ<sub>mak</sub>. The scale runs between the true extremes of the section, so a hollow shaft starts at τ<sub>min</sub> at the bore rather than at zero. It is **off by default** — the arrow diagram below is the default view — and the two are independent toggles that can also be shown together. Two controls shape the scale. *Renk Ölçeği* chooses the **range**: **Otomatik** spans the section's own τ<sub>min</sub>…τ<sub>max</sub>, so the colours read the *shape* of the distribution and do not change with the torque (τ and τ<sub>mak</sub> scale together); **Sabit** spans 0…τ<sub>ref</sub> for a reference stress you enter, so the colours track the **absolute** magnitude — raise the torque and the section moves from blue towards red, saturating at red once τ<sub>ref</sub> is exceeded, which makes a comparison against an allowable stress immediate. *Renk dağılımı* γ bends the ramp itself (t → t<sup>γ</sup>): γ &lt; 1 separates the low-stress region, γ &gt; 1 the high-stress one, with the ends fixed. The colour bar is drawn through the same curve, so it always shows the mapping actually in use, while its tick labels stay linear in stress. Both settings are remembered between sessions
 - **Circular sections** — the shear-stress diagram is drawn over the full vertical diameter on an opaque background, so it reads as a block laid over the section. Since τ is tangential, the arrows are horizontal and reverse across the centre (antisymmetric). The envelope is linear within each material and jumps at material interfaces; **both sides of a jump are labelled**, τ<sub>mak</sub> and τ<sub>min</sub> appear at both ends of the diameter, and the envelope continues as a dashed line across the bore of a hollow section
 - **Rectangular sections** — the diagram is drawn along both centroidal axes with tangential (perpendicular) arrows: τ<sub>mak</sub> at the midpoints of the long sides, τ<sub>2</sub> at the midpoints of the short sides, and zero at the corners. The envelope follows the **exact series profile**, which is not linear
 - **Rectangular sections, diagram path** — *Diagram along: Axes / Diagonal / All* chooses where the diagram is drawn. **Diagonal** replaces the two symmetry axes with a **single diagonal**; **All** shows the horizontal axis, the vertical axis and the diagonal together in one figure. A diagonal is not a symmetry axis (except in a square), and it makes a point the axis diagrams cannot: τ vanishes at **both** ends of the diagonal — at the centroid *and* at the corner — with a single maximum in between, worth ≈0.46·τ<sub>mak</sub> for a square rising to ≈0.60·τ<sub>mak</sub> at 4:1. Ordinates are the stress **magnitude** |τ|, computed from the exact stress field at each point and plotted normal to the diagonal in the usual diagram convention. Note that the arrow **length** carries the magnitude while its direction only marks the sense of twist: the true τ vector is normal to the diagonal only in a square, and leans towards the long-side direction as the rectangle lengthens (≈15° off the diagonal at 4:1). Every mode uses the same scale, so switching between them compares the three paths directly. Because the distribution is antisymmetric about the centroid, a single-path mode draws both lobes of its line; *All* draws **one lobe each** — one horizontal, one vertical, one diagonal — and drops the corner τ = 0 label, which would otherwise collide with the axis label on a square (the envelope still visibly returns to the baseline there)
 - Torque *M*<sub>b</sub> — a compact circular arrow near the centroid, turning in the same sense as the shear-stress arrows (the τ distribution equilibrates this torque), with its gap left open along the radius dimension arrows; the sense follows the sign of *T*
 - **Radius dimensioning** — an arrow from the centre to each circle, labelled *R* for a solid part and *R*<sub>d</sub> / *R*<sub>i</sub> for a ring (part number appended in composite sections; a circle shared by two parts is dimensioned once). Rectangles are dimensioned by their overall *b* × *h*
 - Centroidal axes, centroid marker, dimension lines, part borders — each toggleable
-- **SVG export** of the section drawing; **JSON save/load** of the project (format v2.1)
+- **Verification** of the thin-walled formulation: element areas and second moments checked against hand calculation (including the non-zero *I*<sub>xy</sub> of Z and L), the open-section *J* against (1/3)Σ*b t*³ and against the exact Saint-Venant series in the thin-strip limit (within 5 % at *b*/*t* = 40), and the closed box against Bredt–Batho term by term (*A*<sub>m</sub>, ∮d*s*/*t*, *q*, τ = *q*/*t*, *W*<sub>t</sub>)
+- **SVG export** of the section drawing (the stress map travels with it as an embedded image, the colour bar as vector rectangles); **JSON save/load** of the project (format v2.1)
 
 ### 3D Visualisation
 
 An interactive 3D view (Three.js/WebGL) extrudes the section along the member axis with per-material colours, wireframe/edge toggles and fullscreen support. Dragging with the **left** mouse button pans, the **right** button orbits, and the **middle** button zooms (as does the scroll wheel); on touch, one finger orbits and pinch zooms.
 
+**Picture-in-picture preview** — loading a model or drawing the first shape on an empty canvas pops up a small 3D preview in the bottom-right corner of the section-drawing panel, without switching the full layout to split view. It shares the same 3D scene as the full view (only its size and position change, so no second render context is created), and the camera re-frames the member for the box it is moving into — the small preview and the full panel have very different proportions, and a camera left at the other one's distance would not fit, and carries two controls in its top-right corner: a restore button that opens the 3D panel at its normal, full application size, and a close button that dismisses only the small preview. It reappears the next time a model is loaded or a new section is started from a blank canvas.
+
 Orientation is controlled by an **AutoCAD-style ViewCube** in the corner of the 3D panel: the cube always shows the current camera direction, clicking one of its faces swings the camera to that view, and dragging the cube orbits freely. Six labelled buttons below it (front, back, left, right, top and isometric) do the same for the axis views. A view change only rotates the camera — the zoom level and the panned centre are preserved, as in CAD; *Fit All* is what re-frames the model. Looking straight down the axis keeps the same left-right orientation as the front view, so the member does not appear to spin when switching between them.
 
 The camera re-fits itself **only when the bar geometry changes**. Changing the torque rebuilds the deformed bar, and the twisted shape's bounding box grows with it, so an unconditional auto-fit made the view zoom in and out on every step of the torque slider — the load is what the user is watching, and it was the one thing the camera would not hold still for. The torque is therefore excluded from the fit trigger: dragging the slider leaves the viewpoint, and any zoom the user has set, exactly where it was. *Fit All* still re-fits on demand.
 
+**Fit All** frames everything the scene draws — bar, edge lines and the two end axis triads — for the direction the camera is currently looking from, and it resets the pan as well as the zoom, so a model dragged off the panel comes back. The distance is solved from the eight corners of the bounding box projected onto the camera's own screen axes rather than from the largest edge alone: the largest edge is the bar's *length*, which says nothing about how much of the screen the bar covers when you look down its axis, and on a short bar it put the camera inside the model. The margin is taken out of the field of view instead of multiplying the distance, because scaling the distance pushes only the near end of a long bar back and leaves the view half empty. The zoom limit and the far clipping plane follow the fit distance, so a 30 m member is framed rather than clipped away.
+
+**Member length** — the drawn length defaults to ten times the largest section dimension, which keeps the proportions of a slender bar whatever the section size. It is a *default*, not a constraint: any value entered in the field is kept from then on (down to zero), and clearing the field returns to the automatic length. Changing it re-frames the camera, since the bar's geometry has changed. The same length also drives the relative end rotation φ = θ′·*L* in the results panel, so it can be set from either field and is saved with the project once it has been pinned.
+
 **Deformed shape** — the bar can be drawn in its twisted state: each cross-section is rotated by φ(z) = θ′·z, and a rectangular section additionally **warps** out of plane by *w* = θ′·ψ(x, y) — a circular section does not warp (ψ ≡ 0), which is exactly why the elementary formula holds for it. The warping function ψ is the exact series solution of ∇²ψ = 0 with the free-surface condition.
+
+**Warping display** — the out-of-plane deformation is a **separate option**, **off by default**, with its own exaggeration factor, and it is only offered for the section family that actually warps: for a circular or annular section the control is disabled and says why (ψ ≡ 0). Switched on, both end faces are drawn as a subdivided **saddle surface** carrying a grid, so the shape of ψ can be read directly, and the same axial displacement is applied to the whole body — under uniform torsion warping does not vary along the bar, so every fibre simply shifts along the axis by its own *w*, and the transverse contours pick the saddle up at every station. The end faces need that dedicated surface because the extruded lid is triangulated from the section *outline* alone: for a rectangle that is four corners and two triangles, which cannot show a saddle. While warping is drawn, the lid is hidden and the section outline is subdivided so that the lateral surface ends on exactly the same curve as the saddle — with only four corner points the lateral surface would end on a straight chord and tear away from it.
+
+Because warping is a separate option it can also be shown **on its own**, with the twist switched off: a straight prismatic bar whose end faces are nevertheless not plane.
 
 Two axis triads are drawn at the centre of the **free end** face. The coloured one is attached to the cross-section: it rotates with it by exactly the same φ(L) = k·θ′·L used to draw the deformed body, so the twist is readable as an angle rather than inferred from the surface. The second triad is the **fixed end's** frame, carried to the same origin and drawn in grey tones — it does not rotate, so the angle between the two triads *is* the visualised end rotation. The grey reference appears only while there is a twist to compare against; with zero torque, or with the deformed shape switched off, the two would coincide exactly and only the section triad is drawn.
 
-Real twist angles are far too small to see (thousandths of a degree), so the shape is drawn with an **exaggeration factor**, exactly as in finite-element post-processing. The factor is deliberately **independent of the applied torque** — it is calibrated from the section's own rigidity so that a 1 kNm reference torque would show ≈25° of end rotation. The drawn twist is therefore **directly proportional to *T***: doubling the torque doubles the visible twist. (An auto-factor recomputed from the current torque would cancel it out and leave the picture unchanged whatever the load.) Very large torques are clamped to keep the model readable, and the label reports it. The **true** end rotation θ′·*L* is always reported alongside, and the factor can be overridden manually. A single factor scales all displacement components, so their relative proportions stay physical; the warping is therefore small next to the accumulated twist of a slender bar.
+Real twist angles are far too small to see (thousandths of a degree), so the shape is drawn with an **exaggeration factor**, exactly as in finite-element post-processing. The factor is deliberately **independent of the applied torque** — it is calibrated from the section's own rigidity so that a 1 kNm reference torque would show ≈25° of end rotation. The drawn twist is therefore **directly proportional to *T***: doubling the torque doubles the visible twist. (An auto-factor recomputed from the current torque would cancel it out and leave the picture unchanged whatever the load.) Very large torques are clamped to keep the model readable, and the label reports it. The **true** end rotation θ′·*L* is always reported alongside, and the factor can be overridden manually.
+
+Warping carries its **own** factor for the same reason it needs its own option. The twist of a slender bar accumulates over the length, while warping does not: the true *w*<sub>max</sub> is of the order of a ten-thousandth of the section size, so at the factor that makes the twist visible the saddle is still invisible. Its factor is calibrated the same way — from a 1 kNm reference torque, so the drawn warping stays proportional to *T* — but to a target of ≈8 % of √(*w*·*h*), and it too can be overridden or clamped. The two components are therefore **not** drawn to a common scale; the panel reports the true *w*<sub>max</sub> = |θ′|·max|ψ| in millimetres so the real magnitude is never lost.
 
 Because a circular bar's outer surface is a surface of revolution, twisting it leaves the silhouette unchanged. Longitudinal **reference lines** — straight before deformation, helical after — are drawn on the surface (at the corners of a rectangle) so that the twist is visible for every section type.
 
@@ -109,8 +130,9 @@ For the same reason the shading uses **crease-angle normal smoothing** instead o
 |--------|---------|------------------------|
 | *T* | applied torsional moment (torque) | kNm |
 | *G* | shear modulus of a material | GPa |
-| θ′ | rate of twist (twist per unit length) | rad/mm (internally) |
-| θ | rate of twist as reported | °/m |
+| θ′ | rate of twist (twist per unit length) | rad/mm internally, reported in rad/m or °/m |
+| φ | relative rotation of the bar ends, φ = θ′·*L* | rad or ° |
+| *L* | bar length | mm |
 | τ | shear stress | MPa |
 | ρ | radial distance from the axis (circular sections) | mm |
 | *r*<sub>o</sub>, *r*<sub>i</sub> | outer / inner radius of a ring | mm |
@@ -216,6 +238,31 @@ Away from the two centroidal axes the closed-form mid-side profiles no longer ap
 
 with *x*, *y* measured from the centroid and the shorter side taken along *y* so that the series decay exponentially. Evaluated at the mid-sides these reduce **exactly** to k₁·*G*θ′·*b* and k₂·*G*θ′·*b*, and the field is antisymmetric about the centroid, τ(−**P**) = −τ(**P**) — which is why the diagonal ordinates fall on opposite sides of the baseline in the two halves.
 
+### Thin-walled sections
+
+> **Currently disabled in the interface.** The thin-walled profile feature is switched off behind a single flag (`PROFILE_UI_ENABLED` in `script.js`): the *Profil* tool is hidden and a section again holds at most one rectangle. The implementation below is intact and still runs — a project file containing a multi-element section loads and computes as described — and setting the flag back to `true` restores the tools. The rest of this section documents the feature as it behaves when enabled.
+
+A **thin-walled** member is idealised as an assembly of narrow rectangular walls. The section is built by **adding elements**: each rectangle drawn (or generated by a ready-made profile) is one wall, and the assembly is analysed as a whole. Because elements may be drawn overlapping, the area and the second moments are taken from an exact **decomposition of the union** — all element edges are collected into a grid whose every cell lies wholly inside or wholly outside, so overlapping material is counted once and the result stays closed-form.
+
+Whether the section is open or closed is read off the geometry rather than declared: a flood fill over that same grid looks for a void the outside cannot reach. Bredt–Batho is solved for a **single rectangular** cell, so anything else — two cells, an L-shaped void — is reported instead of being silently approximated. All elements must share one shear modulus; a multi-material thin-walled profile is a different problem and is refused rather than answered with the first element's *G*.
+ The two topologies obey different laws, and the difference is the single most important fact about torsion of such members.
+
+**Open profiles** (I, channel, Z, T, angle) behave as the sum of their walls. Each wall carries the thin-rectangle solution, so with *b*<sub>i</sub> the wall **mid-line length** and *t*<sub>i</sub> its thickness:
+
+> *J* = (1/3) Σ *b*<sub>i</sub>·*t*<sub>i</sub>³,  θ′ = *T*/(*G*·*J*),  τ<sub>i</sub>(*n*) = 2·*G*·θ′·*n*
+
+with *b*<sub>i</sub> and *t*<sub>i</sub> the long and short side of the element **as drawn**. The junction where two walls meet belongs to the element that covers it, so it is counted once; against the mid-line convention this is slightly conservative (≈1 % for a typical I).
+
+The shear stress is **linear across the thickness**: zero on the wall mid-line, greatest on the two surfaces where τ<sub>i</sub> = *G*·θ′·*t*<sub>i</sub>. The largest stress is therefore in the **thickest** wall, and τ<sub>max</sub> = *T*·*t*<sub>max</sub>/*J*. Stiffening from the fillets at the junctions is neglected (the usual η factor is taken as 1), so *J* is a lower bound.
+
+Because the assembly is what is analysed, a shape outside the ready-made list — a hat, a stiffened plate, an unequal angle — is obtained simply by drawing its walls.
+
+**Closed profiles** (box) carry a **shear flow** *q* that is constant around the perimeter (Bredt–Batho). With *A*<sub>m</sub> the area enclosed by the wall mid-line:
+
+> *q* = *T*/(2·*A*<sub>m</sub>),  τ<sub>i</sub> = *q*/*t*<sub>i</sub>,  *J* = 4·*A*<sub>m</sub>²/∮(d*s*/*t*)
+
+Here τ is **constant through the thickness** and the largest stress is in the **thinnest** wall — the opposite of the open case. Closing a section is dramatic: for the same outside dimensions a box is two orders of magnitude stiffer in torsion than the corresponding channel (≈200× for the default 100×200×10×7 profile), and its peak stress is smaller in the same proportion. The colour map shows both facts at once — the gradient across each wall of an open profile, the flat colour of each wall of a closed one.
+
 **Why the two families are never mixed.** Circular and rectangular torsion rest on incompatible kinematic assumptions — plane sections versus warping — and their stiffnesses are not additive across such a boundary. A section therefore holds *either* concentric circular parts *or* a single rectangle; the application blocks the combination both while drawing and while computing.
 
 ### What is deliberately not modelled
@@ -230,6 +277,9 @@ Being explicit about the boundaries of the model is part of using it correctly:
 - **Hollow rectangular (box) sections** — these require thin-walled Bredt–Batho theory (*I*<sub>t</sub> = 4*A*<sub>m</sub>²/∮(d*s*/*t*)), which is a different formulation and is out of scope
 - **Open thin-walled profiles** (L, T, I sections built from rectangles, *I*<sub>t</sub> ≈ Σ *h*<sub>i</sub>*b*<sub>i</sub>³/3) and **arbitrary polygonal sections**
 - **Composite (multi-material) rectangles** — no elementary solution exists for a warping composite section
+- **Multi-cell closed sections** — a single rectangular cell is assumed, so one shear flow; anything else is reported rather than approximated
+- **Multi-material thin-walled assemblies** — all elements must share one *G*
+- **Junction stiffening in open profiles** — the fillet correction factor η is taken as 1, so *J* is slightly conservative for rolled shapes
 - **Non-concentric circular assemblies** — a single twist axis is assumed
 - The **3D deformed shape is a scaled visualisation**, not a stress plot or a large-displacement analysis
 
@@ -241,6 +291,7 @@ The implementation is checked against independent references rather than against
 - **Rectangle coefficients** reproduce the published Timoshenko/Roark tables across the full range of aspect ratios (α, β to ±0.0015 and γ to ±0.0025), satisfy the square-symmetry condition γ = 1 exactly, converge to the thin-strip limits, and agree with an **independent finite-difference solution** of ∇²φ = −2*G*θ′ to within 0.02 %.
 - **The stress field** used by the diagonal diagram is checked against an independent finite-difference solution of the Prandtl equation over the whole section (worst-case deviation below 0.1 % of τ<sub>max</sub> at aspect ratios from 1:1 to 4:1), reproduces k₁ and k₂ exactly at the mid-sides, and returns zero at the centroid and at the corners.
 - **The warping function ψ** is verified by confirming ∇²ψ = 0, by checking the free-surface boundary condition, and — the decisive test — by recovering the torsion constant from it, *I*<sub>t</sub> = ∬ (x² + y² + x·∂ψ/∂y − y·∂ψ/∂x) d*A*, which matches β·*a*·*b*³ to better than 0.01 % for common aspect ratios and 0.05 % for a 10:1 strip.
+- **The warped 3D surface** is read back out of the generated geometry and checked against ψ's own properties: zero on the centroidal axes, antisymmetric across them, identical at both ends (uniform torsion), proportional to *T*, and — for a 10:1 strip — matching the classical thin-rectangle limit *w* → −θ′·x·y away from the short edges. Its boundary is verified to coincide vertex-for-vertex with the lateral surface, so no gap can open between them.
 - The drawing, interaction and file-format logic is covered by an automated test suite that exercises the application's own functions.
 
 ---
@@ -319,15 +370,22 @@ Navigate to `http://localhost:8000` in a web browser to launch the application. 
 
 ---
 
+## 🚀 Start screen
+
+The application opens on a **model chooser**: start a new model, open a saved file, or pick one of the ready examples. The examples are chosen to show *different* things rather than different dimensions — the efficiency of a hollow shaft, the stress jump at a material interface in a composite, the case where τ<sub>max</sub> falls **inside** the section because the core is the stiffer material, and the rectangular family from a square to a 2:1 section (warping).
+
+Each card's picture is an **SVG generated from the model itself**, so it cannot drift out of step with what clicking it produces; the colours come from the same material palette as the canvas. A *don't show again* checkbox remembers the choice, and the language can be switched from the same screen.
+
 ## 📖 Usage
 
 1. **Draw the cross-section** — Use the **Circle** tool for a solid shaft, or the **Ring** tool for a hollow shaft: click the centre, then one diameter, then the other — the ring is created in one go (press *Esc* to cancel a half-finished ring). Add further concentric rings for composite sections; they snap to the common centre automatically. For a **rectangular or square** shaft use the **Rectangle** tool (drag corner to corner, *Shift* for a square) — one rectangle per section, and it cannot be combined with circular parts.
 2. **Assign materials and dimensions** — In the *Kesitler* (Sections) list, set each part's shear modulus **G** (GPa). Dimensions can be edited numerically there as well: *r*<sub>d</sub> / *r*<sub>i</sub> for circular parts, *b* / *h* for a rectangle.
 3. **Apply the torque** — Enter the torsional moment **T** (kNm) or drag the slider beneath it; the section drawing, the results and the 3D deformed shape follow live (double-click the slider to return to zero). Negative values reverse the twist direction. Typing a value beyond the slider's range widens it.
-4. **Read the results** — τ<sub>max</sub> and τ<sub>min</sub> (or τ<sub>2</sub> for a rectangle), per-material interface stresses, *I*<sub>p</sub> / *I*<sub>t</sub>, *W*<sub>t</sub>, Σ*G*·*I*<sub>p</sub> / *G*·*I*<sub>t</sub> and the rate of twist θ update instantly.
-5. **Inspect the diagram** — For a circular section the distribution is drawn over the full vertical diameter, with the tangential arrows reversing across the centre and jumping at material interfaces. For a rectangle it is drawn along both centroidal axes, with the maximum at the midpoints of the long sides and zero at the corners.
-6. **Study the deformation** — Switch on the 3D view to see the twisted member; for a rectangle the warping of the cross-section is included. The exaggeration factor and the true end rotation are reported in the 3D settings.
-7. **Export** — Export the drawing as SVG, or save/load the project as JSON.
+4. **Read the results** — τ<sub>max</sub> and τ<sub>min</sub> (or τ<sub>2</sub> for a rectangle) and the per-material interface stresses appear under *Kayma Gerilmeleri*; *I*<sub>p</sub> / *I*<sub>t</sub> and *W*<sub>t</sub> under the section-property panel; and Σ*G*·*I*<sub>p</sub> / *G*·*I*<sub>t</sub> with the rate of twist θ′ and the relative end rotation φ = θ′·*L* under *Deplasmanlar*. All of them update instantly. Set the bar length *L* there, and switch the angle unit between radians (default) and degrees.
+5. **Read the diagram** — *Gerilme Dağılımı* is on by default and draws the classical ordinate diagram. For a circular section it is drawn over the full vertical diameter, with the tangential arrows reversing across the centre and jumping at material interfaces. For a rectangle it is drawn along both centroidal axes, with the maximum at the midpoints of the long sides and zero at the corners.
+6. **Switch on the stress map** *(optional)* — *Gerilme Haritası* fills the cross-section with the colour field of |τ|: blue where the stress is smallest, red where it is largest, with the scale shown beside the drawing. In a composite shaft the colour steps at the material interface; in a rectangle the red bands sit at the midpoints of the long sides and the corners stay blue. It can be shown together with the diagram.
+7. **Study the deformation** — Switch on the 3D view to see the twisted member. For a rectangle, switching on *Çarpılma* (warping) — off by default, so the bar starts out as a plain prism — additionally draws the end sections as the saddle surface they really become; it has its own exaggeration factor, and it can be shown with the twist switched off. The factors, the true end rotation and the true maximum warping are reported in the 3D settings; the end rotation is the same φ as in the *Deplasmanlar* panel, in the same unit.
+8. **Export** — Export the drawing as SVG, or save/load the project as JSON.
 
 ---
 

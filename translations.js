@@ -2,6 +2,13 @@
 
 const translations = {
     tr: {
+        // Açılış ekranı
+        startupTitle: "Bir Model Seçin",
+        startupSubtitle: "Hazır bir örnekle başlayın, dosya açın veya yeni model oluşturun",
+        startupNew: "Yeni Model",
+        startupOpen: "Aç",
+        startupPresets: "HAZIR MODELLER",
+        startupHide: "Bir daha gösterme",
         // Başlıklar
         modeTitle: "HESAP MODU",
         modeAtalet: "Atalet Momenti",
@@ -128,6 +135,13 @@ const translations = {
     },
 
     en: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         // Titles
         modeTitle: "CALCULATION MODE",
         modeAtalet: "Moment of Inertia",
@@ -253,6 +267,13 @@ const translations = {
         moreLangsBtn: "More Languages"
     },
     de: {
+        // Açılış ekranı
+        startupTitle: "Modell wählen",
+        startupSubtitle: "Mit einem Beispiel beginnen, Datei öffnen oder neues Modell erstellen",
+        startupNew: "Neues Modell",
+        startupOpen: "Öffnen",
+        startupPresets: "FERTIGE MODELLE",
+        startupHide: "Nicht mehr anzeigen",
         // Titel
         modeTitle: "BERECHNUNGSMODUS",
         modeAtalet: "Trägheitsmoment",
@@ -374,6 +395,13 @@ const translations = {
         moreLangsBtn: "Mehr Sprachen"
     },
     zh: {
+        // Açılış ekranı
+        startupTitle: "选择模型",
+        startupSubtitle: "从示例开始、打开文件或创建新模型",
+        startupNew: "新建模型",
+        startupOpen: "打开",
+        startupPresets: "示例模型",
+        startupHide: "不再显示",
         // 标题
         modeTitle: "计算模式",
         modeAtalet: "惯性矩",
@@ -496,6 +524,13 @@ const translations = {
     },
 
     es: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "MODO DE CÁLCULO", modeAtalet: "Momento de Inercia", modeEgilme: "Flexión", modeDisMerkezlik: "Excentricidad",
         drawingTools: "HERRAMIENTAS DE DIBUJO", elementLists: "ELEMENTOS", loadsTitle: "CARGAS", momentTitle: "MOMENTO FLECTOR",
         visualization: "CONFIGURACIÓN VISUAL", layout: "DISEÑO DE PÁGINA", sectionDrawing: "DIBUJO DE SECCIÓN",
@@ -544,6 +579,13 @@ const translations = {
     },
 
     it: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "MODALITÀ DI CALCOLO", modeAtalet: "Momento di Inerzia", modeEgilme: "Flessione", modeDisMerkezlik: "Eccentricità",
         drawingTools: "STRUMENTI DI DISEGNO", elementLists: "ELEMENTI", loadsTitle: "CARICHI", momentTitle: "MOMENTO FLETTENTE",
         visualization: "IMPOSTAZIONI VISIVE", layout: "LAYOUT PAGINA", sectionDrawing: "DISEGNO SEZIONE",
@@ -592,6 +634,13 @@ const translations = {
     },
 
     pt: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "MODO DE CÁLCULO", modeAtalet: "Momento de Inércia", modeEgilme: "Flexão", modeDisMerkezlik: "Excentricidade",
         drawingTools: "FERRAMENTAS DE DESENHO", elementLists: "ELEMENTOS", loadsTitle: "CARGAS", momentTitle: "MOMENTO FLETOR",
         visualization: "CONFIGURAÇÕES VISUAIS", layout: "LAYOUT DA PÁGINA", sectionDrawing: "DESENHO DE SEÇÃO",
@@ -640,6 +689,13 @@ const translations = {
     },
 
     fr: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "MODE DE CALCUL", modeAtalet: "Moment d'Inertie", modeEgilme: "Flexion", modeDisMerkezlik: "Excentricité",
         drawingTools: "OUTILS DE DESSIN", elementLists: "ÉLÉMENTS", loadsTitle: "CHARGES", momentTitle: "MOMENT FLÉCHISSANT",
         visualization: "PARAMÈTRES VISUELS", layout: "MISE EN PAGE", sectionDrawing: "DESSIN DE SECTION",
@@ -688,6 +744,13 @@ const translations = {
     },
 
     ru: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "РЕЖИМ РАСЧЁТА", modeAtalet: "Момент инерции", modeEgilme: "Изгиб", modeDisMerkezlik: "Эксцентриситет",
         drawingTools: "ИНСТРУМЕНТЫ РИСОВАНИЯ", elementLists: "ЭЛЕМЕНТЫ", loadsTitle: "НАГРУЗКИ", momentTitle: "ИЗГИБАЮЩИЙ МОМЕНТ",
         visualization: "ВИЗУАЛЬНЫЕ НАСТРОЙКИ", layout: "МАКЕТ СТРАНИЦЫ", sectionDrawing: "ЧЕРТЁЖ СЕЧЕНИЯ",
@@ -736,6 +799,13 @@ const translations = {
     },
 
     ar: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "وضع الحساب", modeAtalet: "عزم القصور الذاتي", modeEgilme: "الانحناء", modeDisMerkezlik: "اللامركزية",
         drawingTools: "أدوات الرسم", elementLists: "العناصر", loadsTitle: "الأحمال", momentTitle: "عزم الانحناء",
         visualization: "الإعدادات المرئية", layout: "تخطيط الصفحة", sectionDrawing: "رسم المقطع",
@@ -784,6 +854,13 @@ const translations = {
     },
 
     ja: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "計算モード", modeAtalet: "断面二次モーメント", modeEgilme: "曲げ", modeDisMerkezlik: "偏心",
         drawingTools: "描画ツール", elementLists: "要素", loadsTitle: "荷重", momentTitle: "曲げモーメント",
         visualization: "表示設定", layout: "ページレイアウト", sectionDrawing: "断面図",
@@ -832,6 +909,13 @@ const translations = {
     },
 
     ko: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "계산 모드", modeAtalet: "단면 2차 모멘트", modeEgilme: "굽힘", modeDisMerkezlik: "편심",
         drawingTools: "그리기 도구", elementLists: "요소", loadsTitle: "하중", momentTitle: "굽힘 모멘트",
         visualization: "시각 설정", layout: "페이지 레이아웃", sectionDrawing: "단면도",
@@ -880,6 +964,13 @@ const translations = {
     },
 
     fa: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "حالت محاسبه", modeAtalet: "ممان اینرسی", modeEgilme: "خمش", modeDisMerkezlik: "خروج از مرکز",
         drawingTools: "ابزارهای رسم", elementLists: "عناصر", loadsTitle: "بارها", momentTitle: "ممان خمشی",
         visualization: "تنظیمات تصویری", layout: "چیدمان صفحه", sectionDrawing: "رسم مقطع",
@@ -928,6 +1019,13 @@ const translations = {
     },
 
     hi: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "गणना मोड", modeAtalet: "जड़ता का क्षण", modeEgilme: "झुकाव", modeDisMerkezlik: "विकेंद्रता",
         drawingTools: "ड्राइंग उपकरण", elementLists: "तत्व", loadsTitle: "भार", momentTitle: "झुकाव क्षण",
         visualization: "दृश्य सेटिंग", layout: "पृष्ठ लेआउट", sectionDrawing: "अनुभाग चित्र",
@@ -976,6 +1074,13 @@ const translations = {
     },
 
     bn: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "গণনা মোড", modeAtalet: "জড়তার ভ্রামক", modeEgilme: "বাঁকানো", modeDisMerkezlik: "বিকেন্দ্রতা",
         drawingTools: "অঙ্কন সরঞ্জাম", elementLists: "উপাদান", loadsTitle: "ভার", momentTitle: "বাঁকানো ভ্রামক",
         visualization: "দৃশ্য সেটিং", layout: "পৃষ্ঠা লেআউট", sectionDrawing: "অনুচ্ছেদ চিত্র",
@@ -1024,6 +1129,13 @@ const translations = {
     },
 
     he: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "מצב חישוב", modeAtalet: "מומנט אינרציה", modeEgilme: "כפיפה", modeDisMerkezlik: "אקסצנטריות",
         drawingTools: "כלי שרטוט", elementLists: "אלמנטים", loadsTitle: "עומסים", momentTitle: "מומנט כפיפה",
         visualization: "הגדרות חזותיות", layout: "פריסת עמוד", sectionDrawing: "שרטוט חתך",
@@ -1072,6 +1184,13 @@ const translations = {
     },
 
     ur: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "حسابی طریقہ", modeAtalet: "لمحہ جڑت", modeEgilme: "جھکاؤ", modeDisMerkezlik: "بے مرکزیت",
         drawingTools: "ڈرائنگ ٹولز", elementLists: "عناصر", loadsTitle: "بوجھ", momentTitle: "جھکاؤ لمحہ",
         visualization: "بصری ترتیبات", layout: "صفحہ ترتیب", sectionDrawing: "سیکشن ڈرائنگ",
@@ -1120,6 +1239,13 @@ const translations = {
     },
 
     el: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "ΛΕΙΤΟΥΡΓΙΑ ΥΠΟΛΟΓΙΣΜΟΥ", modeAtalet: "Ροπή αδράνειας", modeEgilme: "Κάμψη", modeDisMerkezlik: "Εκκεντρότητα",
         drawingTools: "ΕΡΓΑΛΕΙΑ ΣΧΕΔΙΑΣΗΣ", elementLists: "ΣΤΟΙΧΕΙΑ", loadsTitle: "ΦΟΡΤΙΑ", momentTitle: "ΡΟΠΗ ΚΑΜΨΗΣ",
         visualization: "ΟΠΤΙΚΕΣ ΡΥΘΜΙΣΕΙΣ", layout: "ΔΙΑΤΑΞΗ ΣΕΛΙΔΑΣ", sectionDrawing: "ΣΧΕΔΙΟ ΔΙΑΤΟΜΗΣ",
@@ -1168,6 +1294,13 @@ const translations = {
     },
 
     ro: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "MOD DE CALCUL", modeAtalet: "Moment de inerție", modeEgilme: "Încovoiere", modeDisMerkezlik: "Excentricitate",
         drawingTools: "INSTRUMENTE DE DESEN", elementLists: "ELEMENTE", loadsTitle: "ÎNCĂRCĂRI", momentTitle: "MOMENT ÎNCOVOIETOR",
         visualization: "SETĂRI VIZUALE", layout: "ASPECT PAGINĂ", sectionDrawing: "DESEN SECȚIUNE",
@@ -1216,6 +1349,13 @@ const translations = {
     },
 
     bg: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "РЕЖИМ НА ИЗЧИСЛЕНИЕ", modeAtalet: "Момент на инерция", modeEgilme: "Огъване", modeDisMerkezlik: "Ексцентрицитет",
         drawingTools: "ИНСТРУМЕНТИ ЗА ЧЕРТАНЕ", elementLists: "ЕЛЕМЕНТИ", loadsTitle: "НАТОВАРВАНИЯ", momentTitle: "ОГЪВАЩ МОМЕНТ",
         visualization: "ВИЗУАЛНИ НАСТРОЙКИ", layout: "ОФОРМЛЕНИЕ НА СТРАНИЦА", sectionDrawing: "ЧЕРТЕЖ НА СЕЧЕНИЕ",
@@ -1264,6 +1404,13 @@ const translations = {
     },
 
     sl: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "NAČIN IZRAČUNA", modeAtalet: "Vztrajnostni moment", modeEgilme: "Upogib", modeDisMerkezlik: "Ekscentričnost",
         drawingTools: "ORODJA ZA RISANJE", elementLists: "ELEMENTI", loadsTitle: "OBTEŽBA", momentTitle: "UPOGIBNI MOMENT",
         visualization: "VIZUALNE NASTAVITVE", layout: "POSTAVITEV STRANI", sectionDrawing: "RISANJE PREREZA",
@@ -1312,6 +1459,13 @@ const translations = {
     },
 
     sq: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "MODALITETI I LLOGARITJES", modeAtalet: "Momenti i inercisë", modeEgilme: "Përkulje", modeDisMerkezlik: "Ekscentriciteti",
         drawingTools: "MJETE VIZATIMI", elementLists: "ELEMENTET", loadsTitle: "NGARKESA", momentTitle: "MOMENTI I PËRKULJES",
         visualization: "CILËSIMET VIZUALE", layout: "PARAQITJA E FAQES", sectionDrawing: "VIZATIM SEKSIONI",
@@ -1360,6 +1514,13 @@ const translations = {
     },
 
     hy: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "ՀԱՇՎԱՐԿԻ ՌԵԺԻՄ", modeAtalet: "Իներցիայի պահ", modeEgilme: "Ծռում", modeDisMerkezlik: "Էքսցենտրիկություն",
         drawingTools: "ԳԾԱԳՐԻ ԳՈՐԾԻՔՆԵՐ", elementLists: "ՏԱՐՐԵՐ", loadsTitle: "ԲԵՌԵՐ", momentTitle: "ԾՌՈՂ ՊԱՀ",
         visualization: "ՏԵՍՈՂԱԿԱՆ ԿԱՐԳԱԲԵՐՈՒՄՆԵՐ", layout: "ԷՋԻ ԴԱՍԱՎՈՐՈՒԹՅՈՒՆ", sectionDrawing: "ԿՏՐՎԱԾՔԻ ԳԾԱԳՐՈՒԹՅՈՒՆ",
@@ -1408,6 +1569,13 @@ const translations = {
     },
 
     ka: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "გამოთვლის რეჟიმი", modeAtalet: "ინერციის მომენტი", modeEgilme: "მოხრა", modeDisMerkezlik: "ექსცენტრიციტეტი",
         drawingTools: "ხაზვის ხელსაწყოები", elementLists: "ელემენტები", loadsTitle: "დატვირთვები", momentTitle: "მოხრის მომენტი",
         visualization: "ვიზუალური პარამეტრები", layout: "გვერდის განლაგება", sectionDrawing: "კვეთის ნახაზი",
@@ -1456,6 +1624,13 @@ const translations = {
     },
 
     ne: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "गणना मोड", modeAtalet: "जड्त्व क्षण", modeEgilme: "बंकाइ", modeDisMerkezlik: "उत्केन्द्रता",
         drawingTools: "रेखाचित्र उपकरणहरू", elementLists: "तत्वहरू", loadsTitle: "भारहरू", momentTitle: "बंकाइ क्षण",
         visualization: "दृश्य सेटिङ", layout: "पृष्ठ लेआउट", sectionDrawing: "खण्ड रेखाचित्र",
@@ -1504,6 +1679,13 @@ const translations = {
     },
 
     id: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "MODE PERHITUNGAN", modeAtalet: "Momen Inersia", modeEgilme: "Lentur", modeDisMerkezlik: "Eksentrisitas",
         drawingTools: "ALAT GAMBAR", elementLists: "ELEMEN", loadsTitle: "BEBAN", momentTitle: "MOMEN LENTUR",
         visualization: "PENGATURAN VISUAL", layout: "TATA LETAK", sectionDrawing: "GAMBAR PENAMPANG",
@@ -1552,6 +1734,13 @@ const translations = {
     },
 
     tl: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "MODE NG PAGKALKULA", modeAtalet: "Sandali ng Inertia", modeEgilme: "Baluktot", modeDisMerkezlik: "Eksentrisidad",
         drawingTools: "MGA KASANGKAPAN SA PAGGUHIT", elementLists: "MGA ELEMENTO", loadsTitle: "MGA KARGA", momentTitle: "SANDALI NG BALUKTOT",
         visualization: "MGA SETTING NG VISUAL", layout: "LAYOUT NG PAHINA", sectionDrawing: "GUHIT NG SEKSYON",
@@ -1600,6 +1789,13 @@ const translations = {
     },
 
     my: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "တွက်ချက်မှုပုံစံ", modeAtalet: "မိုမင်းတာ အင်နာရှိယာ", modeEgilme: "ကွေးညွတ်မှု", modeDisMerkezlik: "နေရာမပြည့်မှု",
         drawingTools: "ပုံဆွဲကိရိယာများ", elementLists: "အစိတ်အပိုင်းများ", loadsTitle: "ဝန်များ", momentTitle: "ကွေးညွတ်မှု မိုမင်းတာ",
         visualization: "မြင်ကွင်းဆက်တင်", layout: "စာမျက်နှာ အပြင်အဆင်", sectionDrawing: "ကြားဖြတ် ပုံဆွဲ",
@@ -1648,6 +1844,13 @@ const translations = {
     },
 
     th: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "โหมดการคำนวณ", modeAtalet: "โมเมนต์ความเฉื่อย", modeEgilme: "การดัด", modeDisMerkezlik: "ความเยื้องศูนย์",
         drawingTools: "เครื่องมือวาด", elementLists: "องค์ประกอบ", loadsTitle: "ภาระ", momentTitle: "โมเมนต์ดัด",
         visualization: "การตั้งค่าภาพ", layout: "รูปแบบหน้า", sectionDrawing: "การวาดหน้าตัด",
@@ -1696,6 +1899,13 @@ const translations = {
     },
 
     uz: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "HISOBLASH REJIMI", modeAtalet: "Inersiya Momenti", modeEgilme: "Egilish", modeDisMerkezlik: "Ekssentrisitet",
         drawingTools: "CHIZISH VOSITALARI", elementLists: "ELEMENTLAR", loadsTitle: "YUKLAR", momentTitle: "EGILISH MOMENTI",
         visualization: "VIZUAL SOZLAMALAR", layout: "SAHIFA TARTIBI", sectionDrawing: "KESIM CHIZMASI",
@@ -1744,6 +1954,13 @@ const translations = {
     },
 
     dz: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "རྩིས་ཀྱི་ཐབས་ལམ།", modeAtalet: "འགུལ་མེད་བར་གྱི་ཆ།", modeEgilme: "གུག་སྒྲིལ།", modeDisMerkezlik: "ལྟེ་བ་མིན་མི།",
         drawingTools: "རིས་མཛུབ་མཐིལ།", elementLists: "ཆ་ཤས་ཚུ།", loadsTitle: "འབེབས་ཚད།", momentTitle: "གུག་སྒྲིལ་ཆ།",
         visualization: "མཐོང་སྣང་སྒྲིག་བཀོད།", layout: "ཤོག་ལེབ་སྒྲིག་བཀོད།", sectionDrawing: "དཔར་རིས་གཅོད་ལས།",
@@ -1792,6 +2009,13 @@ const translations = {
     },
 
     tg: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "РЕЖИМИ ҲИСОБ", modeAtalet: "Лаҳзаи Инерсия", modeEgilme: "Хамшавӣ", modeDisMerkezlik: "Эксентриситет",
         drawingTools: "АСБОБҲОИ РАСМ", elementLists: "УНСУРҲО", loadsTitle: "БОРҲО", momentTitle: "ЛАҲЗАИ ХАМШАВӢ",
         visualization: "ТАНЗИМОТИ ВИЗУАЛӢ", layout: "ТАРТИБИ САҲИФА", sectionDrawing: "РАСМИ МАҚТА",
@@ -1840,6 +2064,13 @@ const translations = {
     },
 
     ky: {
+        // Açılış ekranı
+        startupTitle: "Choose a Model",
+        startupSubtitle: "Start from a ready example, open a file, or create a new model",
+        startupNew: "New Model",
+        startupOpen: "Open",
+        startupPresets: "READY MODELS",
+        startupHide: "Don't show again",
         modeTitle: "ЭСЕПТӨӨ РЕЖИМИ", modeAtalet: "Инерция Моменти", modeEgilme: "Ийилүү", modeDisMerkezlik: "Эксцентриситет",
         drawingTools: "ТАРТУУ КУРАЛДАРЫ", elementLists: "ЭЛЕМЕНТТЕР", loadsTitle: "ЖҮКТӨР", momentTitle: "ИЙИЛҮҮ МОМЕНТИ",
         visualization: "ВИЗУАЛДЫК ЖӨНДӨӨЛӨР", layout: "БЕТ АЯНТЫ", sectionDrawing: "КЕСИМИНИН СҮРӨТҮ",

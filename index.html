@@ -5,36 +5,33 @@
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-72HVMM1696"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-72HVMM1696');
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-72HVMM1696');
 </script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>vetin : Burulma</title>
-    <link rel="stylesheet" href="./style.css">
-    <link id="pwa-manifest" rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#2c3e50">
-    <link rel="apple-touch-icon" href="./icon-192.png">
-    <script src="./translations.js"></script>
-    <!-- Three.js for 3D visualization -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>vetin : Burulma</title>
+<link rel="stylesheet" href="./style.css">
+<link id="pwa-manifest" rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#2c3e50">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<script src="./translations.js"></script>
+<!-- Three.js for 3D visualization -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 
 <body>
 
     <!-- SOL PANEL (KART) -->
     <div id="left-panel">
-
         <!-- LOGO -->
         <div class="logo-container">
             <a href="../../">
                 <img src="./logo.svg" alt="vetin Logo" class="panel-logo">
             </a>
         </div>
-
 
         <div class="panel-content">
 
@@ -71,6 +68,41 @@
                     <input type="checkbox" id="cbAxes" checked>
                     <span class="slider"></span>
                 </label>
+            </div>
+
+            <div class="toggle-row">
+                <span class="toggle-label">Gerilme Haritası</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="cbStressMap">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <!-- Harita açıkken görünür: rengin hangi aralığa oturacağı ve rampanın
+                 eğrisi. Otomatik ölçekte renkler momentten bağımsızdır (dağılımın
+                 biçimi okunur), sabit ölçekte gerilmenin mutlak şiddetini gösterir. -->
+            <div id="stressScaleRow" style="display: none;">
+                <div class="toggle-row toggle-row-stacked">
+                    <span class="toggle-label">Renk Ölçeği</span>
+                    <div class="seg-group">
+                        <button type="button" class="seg-btn active" data-stress-scale="auto">Otomatik</button>
+                        <button type="button" class="seg-btn" data-stress-scale="fixed">Sabit</button>
+                    </div>
+                </div>
+                <div class="input-row single-col" id="stressRefRow" style="display: none;">
+                    <div class="input-group">
+                        <span class="text-label">Üst sınır <span class="label-sym">τ</span></span>
+                        <input type="number" id="tbStressRef" value="100" min="0" step="10">
+                        <span class="unit-input">MPa</span>
+                    </div>
+                </div>
+                <div class="input-row single-col">
+                    <div class="input-group">
+                        <span class="text-label">Renk dağılımı <span class="label-sym">γ</span></span>
+                        <input type="number" id="tbStressGamma" value="1" min="0.2" max="5" step="0.1">
+                        <span class="unit-input">—</span>
+                    </div>
+                </div>
             </div>
 
             <div class="toggle-row" id="stressRow">
@@ -126,7 +158,7 @@
             <div class="input-row single-col">
                 <div class="input-group">
                     <span class="text-label" data-i18n="barLength">Çubuk Boyu</span>
-                    <input type="number" id="tbBarLength" value="500" min="100" max="5000">
+                    <input type="number" id="tbBarLength" data-bar-length value="500" min="0" max="50000">
                     <span class="unit-input">mm</span>
                 </div>
             </div>
@@ -178,10 +210,37 @@
                 <div class="input-group readonly">
                     <span class="text-label">Uç dönmesi</span>
                     <span class="value-readonly" id="val3DTwist">0.0000</span>
-                    <span class="unit-input">°</span>
+                    <span class="unit-input" id="unit3DTwist">rad</span>
                 </div>
             </div>
 
+            <!-- Çarpılma: yalnız dikdörtgen kesitte anlamlıdır (dairede ψ ≡ 0) -->
+            <div id="warp3DControls">
+                <div class="toggle-row">
+                    <span class="toggle-label">Çarpılma</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="cb3DWarp" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="input-row single-col">
+                    <div class="input-group">
+                        <span class="text-label">Çarpılma büyütme</span>
+                        <input type="number" id="tbWarpScale" value="0" min="0" step="100">
+                        <span class="unit-input" id="lbl3DWarpScale">× oto</span>
+                    </div>
+                </div>
+                <div class="input-row single-col">
+                    <div class="input-group readonly">
+                        <span class="text-label">w<span class="sub">max</span> (gerçek)</span>
+                        <span class="value-readonly" id="val3DWarp">0.0000</span>
+                        <span class="unit-input">mm</span>
+                    </div>
+                </div>
+            </div>
+            <div class="panel-hint" id="warp3DHint" style="display: none;">
+                Dairesel ve halka kesit burulmada düzlem kalır: çarpılma yoktur (ψ ≡ 0).
+            </div>
         </div>
 
         </div>
@@ -251,7 +310,6 @@
                 <p>&copy; <span class="left-panel-year"></span> · <a href="https://www.rasimtemur.com" target="_blank" rel="noopener noreferrer">Rasim Temür</a> · <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer" data-i18n="mitLicense">MIT Lisansı</a> · <a href="https://github.com/rasimtemur/vetin-momentofinertia" target="_blank" rel="noopener noreferrer" class="github-link"><svg viewBox="0 0 24 24" style="width: 12px; height: 12px; fill: currentColor; margin-right: 2px;"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>GitHub</a></p>
             </div>
         </div>
-
     </div>
 
     <!-- ORTA ALAN (Resizable) -->
@@ -276,6 +334,17 @@
                         <circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/>
                     </svg>
                 </button>
+                <!-- Profil tipi ARAÇ SEÇİMİNDE belirlenir: tip sağ paneldeki listeye
+                     gömülü olduğunda kullanıcı hep I yerleştirdiğini sanıyordu. -->
+                <div class="tool-with-menu">
+                    <button class="tool-btn-vertical" id="btnProfile" title="İnce Cidarlı Profil — tipi seçmek için tıkla">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path d="M5 4h14v3h-5.5v10H19v3H5v-3h5.5V7H5z" fill="currentColor"/>
+                        </svg>
+                        <span class="tool-caret"></span>
+                    </button>
+                    <div id="profileKindMenu" class="profile-kind-menu"></div>
+                </div>
                 <button class="tool-btn-vertical" id="btnRect" title="Dikdörtgen / Kare Kesit (köşeden köşeye sürükleyin, Shift: kare)">
                     <svg viewBox="0 0 24 24" width="20" height="20">
                         <rect x="3" y="6" width="18" height="12" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -338,7 +407,6 @@
             <div id="dimensionLabel" class="dimension-label" style="display: none;"></div>
             <canvas id="mainCanvas"></canvas>
         </div>
-
     </div>
 
     <div id="panel-resizer" class="panel-resizer" style="display: none;"></div>
@@ -346,6 +414,20 @@
     <!-- 3D PANEL -->
     <div id="panel-3d" style="display: none;">
         <div id="three-container">
+            <!-- Küçük (PiP) durumdaki iki tuş: yalnız panel-3d-pip sınıfındayken görünür,
+                 bkz. style.css. Normal görünüm tuşu mevcut tam ekran boyutunu açar. -->
+            <div class="pip-3d-controls">
+                <button class="pip-3d-btn" id="btnPip3DRestore" title="Normal Görünüm">
+                    <svg viewBox="0 0 24 24" width="14" height="14">
+                        <path d="M19 11h-8v6h8v-6zm4-8H1c-.55 0-1 .45-1 1v16c0 .55.45 1 1 1h22c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zm-1 15H2V6h20v12z" fill="currentColor"/>
+                    </svg>
+                </button>
+                <button class="pip-3d-btn" id="btnPip3DClose" title="Kapat">
+                    <svg viewBox="0 0 24 24" width="14" height="14">
+                        <path fill="currentColor" d="M18.3 5.71L12 12.01l-6.3-6.3-1.41 1.41L10.59 13.4l-6.3 6.3 1.41 1.41 6.3-6.3 6.3 6.3 1.41-1.41-6.3-6.3 6.3-6.3z"/>
+                    </svg>
+                </button>
+            </div>
             <span class="panel-title" data-i18n="view3D">3B GÖRÜNÜM</span>
             <div class="controls-3d">
                 <!-- AutoCAD tarzı ViewCube: küpe tıklayınca o yüze döner, sürükleyince
@@ -377,7 +459,23 @@
                                 <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" fill="currentColor"/>
                             </svg>
                         </button>
+                        <!-- Tam görünümden küçük önizlemeye dönüş: PiP tuşuyla aynı simge
+                             (bkz. btnPip3DRestore) — iki yönlü tek bir "PiP değiştir" simgesi -->
+                        <button class="zoom-btn-3d" id="btnEnterPip" title="Küçük Önizleme">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <path d="M19 11h-8v6h8v-6zm4-8H1c-.55 0-1 .45-1 1v16c0 .55.45 1 1 1h22c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zm-1 15H2V6h20v12z" fill="currentColor"/>
+                            </svg>
+                        </button>
                     </div>
+                </div>
+            </div>
+            <!-- Gerilme haritasının renk ölçeği: 2B tuvalindekiyle aynı skala ve
+                 sayılar. WebGL sahnesinin üstüne yazı çizmek yerine DOM'da durur. -->
+            <div id="stress3DLegend" class="stress-legend-3d" style="display: none;">
+                <span class="stress-legend-title">τ (MPa)</span>
+                <div class="stress-legend-body">
+                    <div id="stress3DLegendBar" class="stress-legend-bar"></div>
+                    <div id="stress3DLegendTicks" class="stress-legend-ticks"></div>
                 </div>
             </div>
             <div id="angleDisplay" class="angle-display">θ: 0° φ: 0°</div>
@@ -433,6 +531,16 @@
                         <span class="unit-input">mm⁴</span>
                     </div>
                 </div>
+                <!-- Kutupsal atalet momenti (Ip = Ix + Iy) yalnız dairesel/halka
+                     kesitte gösterilir: dikdörtgende bu değer burulmayı yönetmez,
+                     yerini It alır (bkz. burulma atalet momenti kutusu) -->
+                <div class="input-row single-col" id="rowIpPolar" style="display: none;">
+                    <div class="input-group readonly">
+                        <span class="math-label">I<span class="sub">p</span></span>
+                        <span class="value-readonly" id="valIpPolar">0.00</span>
+                        <span class="unit-input">mm⁴</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -456,9 +564,9 @@
             </div>
         </div>
 
-        <!-- BURULMA GERİLMESİ SONUÇLARI -->
+        <!-- KAYMA GERİLMELERİ -->
         <div class="result-box" id="torsionResultsBox">
-            <span class="panel-title">BURULMA GERİLMESİ</span>
+            <span class="panel-title">KAYMA GERİLMELERİ</span>
             <div class="result-content">
                 <div class="input-row single-col">
                     <div class="input-group readonly stress-max">
@@ -482,9 +590,9 @@
             </div>
         </div>
 
-        <!-- BURULMA RİJİTLİĞİ VE DÖNME -->
+        <!-- DEPLASMANLAR: burulma rijitliği, birim ve bağıl dönme açısı -->
         <div class="result-box" id="torsionRigidityBox">
-            <span class="panel-title">BURULMA RİJİTLİĞİ</span>
+            <span class="panel-title">DEPLASMANLAR</span>
             <div class="result-content">
                 <div class="input-row single-col">
                     <div class="input-group readonly">
@@ -493,11 +601,35 @@
                         <span class="unit-input">kNm²</span>
                     </div>
                 </div>
+                <!-- Bağıl dönme çubuk boyuna bağlıdır (φ = θ′·L); 3B ayarlarındaki
+                     "Çubuk Boyu" ile aynı değerdir, iki alan karşılıklı eşlenir -->
+                <div class="input-row single-col">
+                    <div class="input-group">
+                        <span class="text-label">Çubuk boyu <span class="label-sym">L</span></span>
+                        <input type="number" id="tbBarLengthMain" data-bar-length value="500" min="0" max="50000">
+                        <span class="unit-input">mm</span>
+                    </div>
+                </div>
                 <div class="input-row single-col">
                     <div class="input-group readonly">
-                        <span class="math-label">θ</span>
+                        <span class="text-label">Birim dönme <span class="label-sym">θ′</span></span>
                         <span class="value-readonly" id="valTheta">0.00</span>
-                        <span class="unit-input">°/m</span>
+                        <span class="unit-input" id="unitTheta">rad/m</span>
+                    </div>
+                </div>
+                <div class="input-row single-col">
+                    <div class="input-group readonly">
+                        <span class="text-label">Bağıl dönme <span class="label-sym">φ</span></span>
+                        <span class="value-readonly" id="valPhi">0.00</span>
+                        <span class="unit-input" id="unitPhi">rad</span>
+                    </div>
+                </div>
+                <!-- Varsayılan radyan: teorinin doğal birimi -->
+                <div class="toggle-row toggle-row-stacked angle-unit-row">
+                    <span class="toggle-label">Açı Birimi</span>
+                    <div class="seg-group">
+                        <button type="button" class="seg-btn active" data-angle-unit="rad">Radyan</button>
+                        <button type="button" class="seg-btn" data-angle-unit="deg">Derece</button>
                     </div>
                 </div>
             </div>
@@ -537,6 +669,43 @@
         </div>
     </div>
 
+    <!-- AÇILIŞ EKRANI: uygulama ilk açıldığında model seçim ekranı (bkz. initStartupModal) -->
+    <div id="startupModal" class="startup-overlay" style="display: none;">
+        <div class="startup-dialog">
+            <button class="startup-close" id="startupClose" title="Kapat" aria-label="Kapat">&times;</button>
+            <h2 data-i18n="startupTitle">Bir Model Seçin</h2>
+            <p class="startup-sub" data-i18n="startupSubtitle">Hazır bir örnekle başlayın, dosya açın veya yeni model oluşturun</p>
+            <div class="startup-actions">
+                <button class="startup-action" id="startupNew" type="button">
+                    <svg viewBox="0 0 24 24" width="32" height="32">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/>
+                    </svg>
+                    <span data-i18n="startupNew">Yeni Model</span>
+                </button>
+                <button class="startup-action" id="startupOpen" type="button">
+                    <svg viewBox="0 0 24 24" width="32" height="32">
+                        <path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z" fill="currentColor"/>
+                    </svg>
+                    <span data-i18n="startupOpen">Aç</span>
+                </button>
+            </div>
+            <div class="startup-divider"><span data-i18n="startupPresets">HAZIR MODELLER</span></div>
+            <div id="startupGrid" class="startup-grid"></div>
+            <div class="startup-footer">
+                <div class="startup-langs">
+                    <button type="button" data-startup-lang="tr">TR</button>
+                    <button type="button" data-startup-lang="en">EN</button>
+                    <button type="button" data-startup-lang="de">DE</button>
+                    <button type="button" data-startup-lang="zh">CN</button>
+                </div>
+                <label class="startup-hide">
+                    <input type="checkbox" id="startupHide">
+                    <span data-i18n="startupHide">Bir daha gösterme</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
     <script src="./script.js"></script>
     <script src="./script3d.js"></script>
     <script>
@@ -571,5 +740,4 @@
         }
     </script>
 </body>
-
 </html>
