@@ -1942,6 +1942,15 @@ const STARTUP_PRESETS = [
     }
 ];
 
+// Kart metni: sözlükten (`preset_<id>` / `presetDesc_<id>`). t() eksik anahtarda
+// anahtarın kendisini döndürdüğü için, çevirisi olmayan bir dilde model tanımındaki
+// Türkçe metne düşülür — kartta "preset_solid" yazması yerine.
+function presetText(p, field) {
+    const key = (field === 'name' ? 'preset_' : 'presetDesc_') + p.id;
+    const s = t(key);
+    return s === key ? p[field] : s;
+}
+
 // Kart görseli: modelin kendi geometrisinden SVG. Renkler malzeme paletinden
 // gelir, böylece kart tuvaldeki kesitle aynı görünür ve temayla birlikte değişir.
 function presetThumbSVG(p) {
@@ -1999,7 +2008,7 @@ function presetThumbSVG(p) {
         `fill="${MOMENT_COLOR}"/>`);
 
     return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" ` +
-        `preserveAspectRatio="xMidYMid meet" role="img" aria-label="${p.name}">${parts.join('')}</svg>`;
+        `preserveAspectRatio="xMidYMid meet" role="img" aria-label="${presetText(p, 'name')}">${parts.join('')}</svg>`;
 }
 
 // Modeli tuvale uygular. clearAll() zaten hesabı ve çizimi tazeliyor; burada
@@ -2062,8 +2071,8 @@ function renderStartupPresets() {
             '<div class="startup-thumb">' + presetThumbSVG(p) + '</div>' +
             '<div class="startup-card-name"></div>' +
             '<div class="startup-card-desc"></div>';
-        card.querySelector('.startup-card-name').textContent = p.name;
-        card.querySelector('.startup-card-desc').textContent = p.desc;
+        card.querySelector('.startup-card-name').textContent = presetText(p, 'name');
+        card.querySelector('.startup-card-desc').textContent = presetText(p, 'desc');
         card.addEventListener('click', () => {
             applyStartupPreset(p);
             closeStartupModal();
@@ -2094,8 +2103,9 @@ function initStartupModal() {
         });
     }
 
-    // Dil düğmeleri: kart adları Türkçe sabit (burulmaya özgü metinler gibi),
-    // çerçeve metinleri data-i18n ile çevrilir
+    // Dil düğmeleri: çerçeve metinleri data-i18n ile, kart adları/açıklamaları
+    // JS'te (`presetText`) çevrilir — applyTranslations DOM'a bakar, kartlar ise
+    // her dil değişiminde yeniden kurulmalı.
     m.querySelectorAll('[data-startup-lang]').forEach(btn => {
         btn.addEventListener('click', () => {
             setLanguage(btn.getAttribute('data-startup-lang'));
@@ -2103,7 +2113,10 @@ function initStartupModal() {
         });
     });
     markStartupLang();
-    window.addEventListener('languageChanged', markStartupLang);
+    window.addEventListener('languageChanged', () => {
+        markStartupLang();
+        if (m.style.display !== 'none') renderStartupPresets();
+    });
 
     // Kartlar temaya bağlı renk kullandığından tema değişince yeniden çizilir
     m.addEventListener('click', (e) => { if (e.target === m) closeStartupModal(); });

@@ -374,7 +374,7 @@ Navigate to `http://localhost:8000` in a web browser to launch the application. 
 
 The application opens on a **model chooser**: start a new model, open a saved file, or pick one of the ready examples. The examples are chosen to show *different* things rather than different dimensions — the efficiency of a hollow shaft, the stress jump at a material interface in a composite, the case where τ<sub>max</sub> falls **inside** the section because the core is the stiffer material, and the rectangular family from a square to a 2:1 section (warping).
 
-Each card's picture is an **SVG generated from the model itself**, so it cannot drift out of step with what clicking it produces; the colours come from the same material palette as the canvas. A *don't show again* checkbox remembers the choice, and the language can be switched from the same screen.
+Each card's picture is an **SVG generated from the model itself**, so it cannot drift out of step with what clicking it produces; the colours come from the same material palette as the canvas. A *don't show again* checkbox remembers the choice, and the language can be switched from the same screen — the card names and captions are localised along with the rest of the dialog.
 
 ## 📖 Usage
 
