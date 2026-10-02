@@ -34,6 +34,7 @@ Beyond homogeneous sections, the application solves **composite shafts** consist
 - Operates entirely within the client browser; no server-side computation is required
 - Functions offline as a **Progressive Web App (PWA)**
 - User interface is localised in **33 languages**
+- Part of the **vetin** suite: the 3×3 app launcher next to the logo switches to the other vetin tools (moment of inertia, internal forces, plane stress/strain, bending, eccentricity, shear, Atlas)
 - Supports **multi-material concentric sections** (e.g. a steel core inside a brass sleeve)
 - Closed-form and exact-series solutions throughout — no meshing, no numerical integration
 - Source code is freely distributed under the **MIT License**
@@ -56,14 +57,13 @@ New circular parts automatically **snap to the common centre** of the existing s
 ### Computed Quantities
 
 **Section properties** (exact, closed-form — no numerical integration):
-- *A* — net cross-sectional area
-- *I*<sub>x</sub>, *I*<sub>y</sub>, *I*<sub>xy</sub> — centroidal second moments of area; for a **circular or annular** section the polar moment *I*<sub>p</sub> is listed with them as well, where the reader can check it against *I*<sub>p</sub> = *I*<sub>x</sub> + *I*<sub>y</sub> on the spot. The row is omitted for a rectangle, where the polar moment is not what governs torsion
-- *I*<sub>p</sub> (circular) or *I*<sub>t</sub> (rectangular) — the **torsion constant** of the section
-- *W*<sub>t</sub> — torsional section modulus (*I*<sub>p</sub>/ρ<sub>max</sub> for a circular section, α·*a*·*b*² for a rectangle); for a **homogeneous** section τ<sub>max</sub> = *T*/*W*<sub>t</sub>, whereas in a composite shaft the stress follows from *G*<sub>i</sub>·θ′·ρ and *W*<sub>t</sub> remains a purely geometric quantity
+- *A* — net cross-sectional area. Below it each element of the section gets an editable card (dimensions and *G*); a section made of a **single** element shows only its input fields, without a separate element card
+- *I*<sub>x</sub>, *I*<sub>y</sub>, *I*<sub>xy</sub> — centroidal second moments of area; for a **circular or annular** section the polar moment *I*<sub>p</sub> is listed with them as well, where the reader can check it against *I*<sub>p</sub> = *I*<sub>x</sub> + *I*<sub>y</sub> on the spot. For a rectangle the same row shows the **torsion constant** *I*<sub>t</sub> instead, since there the polar moment is not what governs torsion
+- For a section built from **several elements** (e.g. a composite shaft) the list is given **per element** instead: each element's own *I*<sub>x</sub>, *I*<sub>y</sub>, *I*<sub>xy</sub> (and *I*<sub>p</sub> for circular elements), taken about the common centroid so that they add up to the section's totals.
 
 **Torsional response** for an applied torque *T*, grouped into two panels — *Kayma Gerilmeleri* (shear stresses) and *Deplasmanlar* (displacements):
-- τ<sub>max</sub>, and τ<sub>min</sub> (circular, at the bore) or τ<sub>2</sub> (rectangular, at the midpoint of the short side)
-- Per-material stresses τ<sub>in</sub>, τ<sub>out</sub> at the inner and outer radii of each ring
+- τ<sub>max</sub>, and τ<sub>min</sub> (circular: smallest value over the band inner edges — the bore for a single material) or τ<sub>2</sub> (rectangular, at the midpoint of the short side)
+- For a composite shaft the panel becomes *İç Kuvvetler ve Kayma Gerilmeleri* (internal forces and shear stresses) and lists, **per element**, the share of the torque it carries, *T*<sub>i</sub> = *G*<sub>i</sub>·θ′·*I*<sub>p,i</sub> (Σ*T*<sub>i</sub> = *T*), and the stresses τ<sub>in</sub>, τ<sub>out</sub> at its inner and outer radii (the section's τ<sub>max</sub>/τ<sub>min</sub> are simply the largest/smallest of them). Each ring then behaves as a homogeneous ring under its own share: τ<sub>out,i</sub> = *T*<sub>i</sub>·*r*<sub>out,i</sub>/*I*<sub>p,i</sub>
 - Σ*G*·*I*<sub>p</sub> (circular) or *G*·*I*<sub>t</sub> (rectangular) — torsional rigidity of the section
 - θ′ — **rate of twist**, the rotation per unit length (per metre)
 - φ = θ′·*L* — **relative rotation** of the two ends of a bar of length *L*
@@ -72,7 +72,7 @@ New circular parts automatically **snap to the common centre** of the existing s
 
 Angles are reported in **radians by default** — the natural unit of the theory, and the one in which θ′·*L* is a pure number — with a *Radyan / Derece* switch that converts both quantities to degrees. The choice is remembered between sessions and the 3D panel's true end-rotation readout follows it.
 
-For a rectangular section the result panel switches its labels to the quantities that actually govern it: **I<sub>t</sub>**, **W<sub>t</sub>**, **G·I<sub>t</sub>** and **τ<sub>2</sub>**, and it drops the *I*<sub>p</sub> row from the moments-of-inertia list. The distinction matters: for a non-circular section the polar moment *I*<sub>p</sub> is **not** the torsion constant, and displaying it would be misleading.
+For a rectangular section the result panel switches its labels to the quantities that actually govern it: **I<sub>t</sub>** (in place of *I*<sub>p</sub> in the moments-of-inertia list), **G·I<sub>t</sub>** and **τ<sub>2</sub>**. The distinction matters: for a non-circular section the polar moment *I*<sub>p</sub> is **not** the torsion constant, and displaying it would be misleading.
 
 ### Graphical Output
 
@@ -86,7 +86,7 @@ For a rectangular section the result panel switches its labels to the quantities
 - **Radius dimensioning** — an arrow from the centre to each circle, labelled *R* for a solid part and *R*<sub>d</sub> / *R*<sub>i</sub> for a ring (part number appended in composite sections; a circle shared by two parts is dimensioned once). Rectangles are dimensioned by their overall *b* × *h*
 - Centroidal axes, centroid marker, dimension lines, part borders — each toggleable
 - **Verification** of the thin-walled formulation: element areas and second moments checked against hand calculation (including the non-zero *I*<sub>xy</sub> of Z and L), the open-section *J* against (1/3)Σ*b t*³ and against the exact Saint-Venant series in the thin-strip limit (within 5 % at *b*/*t* = 40), and the closed box against Bredt–Batho term by term (*A*<sub>m</sub>, ∮d*s*/*t*, *q*, τ = *q*/*t*, *W*<sub>t</sub>)
-- **SVG export** of the section drawing (the stress map travels with it as an embedded image, the colour bar as vector rectangles); **JSON save/load** of the project (format v2.1)
+- **SVG export** of the section drawing (the stress map travels with it as an embedded image, the colour bar as vector rectangles); **JSON save/load** of the project (format v2.1). All three live in the settings menu at the bottom of the left panel, under **File**
 
 ### 3D Visualisation
 
@@ -198,6 +198,7 @@ Two consequences are worth emphasising, and both are drawn by the application:
 
 - The **strain** is continuous across an interface but the **stress is not**: it jumps in proportion to the ratio of the shear moduli. Two different values therefore exist at the same radius, one for each material.
 - τ<sub>max</sub> need **not** occur at the outer surface. If an inner material is considerably stiffer, the largest stress may occur at an internal interface; the application searches all band edges rather than assuming the outermost one.
+- Likewise τ<sub>min</sub> need **not** occur at the bore. Each band's smallest stress is *G*<sub>i</sub>·θ′·*r*<sub>in,i</sub>, so with a stiff inner tube inside a soft sleeve the minimum is at the sleeve's inner face; τ<sub>min</sub> is the smallest value over all band inner edges.
 
 For a single material these expressions reduce to the classical τ = *T*·ρ/*I*<sub>p</sub>.
 
@@ -244,7 +245,7 @@ with *x*, *y* measured from the centroid and the shorter side taken along *y* so
 
 A **thin-walled** member is idealised as an assembly of narrow rectangular walls. The section is built by **adding elements**: each rectangle drawn (or generated by a ready-made profile) is one wall, and the assembly is analysed as a whole. Because elements may be drawn overlapping, the area and the second moments are taken from an exact **decomposition of the union** — all element edges are collected into a grid whose every cell lies wholly inside or wholly outside, so overlapping material is counted once and the result stays closed-form.
 
-Whether the section is open or closed is read off the geometry rather than declared: a flood fill over that same grid looks for a void the outside cannot reach. Bredt–Batho is solved for a **single rectangular** cell, so anything else — two cells, an L-shaped void — is reported instead of being silently approximated. All elements must share one shear modulus; a multi-material thin-walled profile is a different problem and is refused rather than answered with the first element's *G*.
+Whether the section is open or closed is read off the geometry rather than declared: a flood fill over that same grid looks for a void the outside cannot reach. Bredt–Batho is solved for a **single rectangular** cell, so anything else — two cells, an L-shaped void — is reported instead of being silently approximated. The wall thicknesses of a closed section are read as the gaps between the outer bounding box and the void, which is only valid when the section is **exactly a rectangular tube**; a closed cell carrying protruding flanges or lips, or a stepped wall, is therefore also refused (a closed cell with open appendages is a different formulation). For open profiles, walls must not be **stacked through their thickness**: *J* = ⅓Σ*b*·*t*³ is summed per element, so splitting one wall into two thinner layers would divide its stiffness by four, and two squares side by side would be treated as two stubby walls instead of one rectangle. Elements joined end to end or at T/corner joints are fine. All elements must share one shear modulus; a multi-material thin-walled profile is a different problem and is refused rather than answered with the first element's *G*.
  The two topologies obey different laws, and the difference is the single most important fact about torsion of such members.
 
 **Open profiles** (I, channel, Z, T, angle) behave as the sum of their walls. Each wall carries the thin-rectangle solution, so with *b*<sub>i</sub> the wall **mid-line length** and *t*<sub>i</sub> its thickness:
@@ -292,13 +293,17 @@ The implementation is checked against independent references rather than against
 - **The stress field** used by the diagonal diagram is checked against an independent finite-difference solution of the Prandtl equation over the whole section (worst-case deviation below 0.1 % of τ<sub>max</sub> at aspect ratios from 1:1 to 4:1), reproduces k₁ and k₂ exactly at the mid-sides, and returns zero at the centroid and at the corners.
 - **The warping function ψ** is verified by confirming ∇²ψ = 0, by checking the free-surface boundary condition, and — the decisive test — by recovering the torsion constant from it, *I*<sub>t</sub> = ∬ (x² + y² + x·∂ψ/∂y − y·∂ψ/∂x) d*A*, which matches β·*a*·*b*³ to better than 0.01 % for common aspect ratios and 0.05 % for a 10:1 strip.
 - **The warped 3D surface** is read back out of the generated geometry and checked against ψ's own properties: zero on the centroidal axes, antisymmetric across them, identical at both ends (uniform torsion), proportional to *T*, and — for a 10:1 strip — matching the classical thin-rectangle limit *w* → −θ′·x·y away from the short edges. Its boundary is verified to coincide vertex-for-vertex with the lateral surface, so no gap can open between them.
-- The drawing, interaction and file-format logic is covered by an automated test suite that exercises the application's own functions.
+- These checks are kept as a permanent automated test suite (see [Tests](#-tests)), together with tests of the file format and of the application's internal interfaces, and a headless-browser snapshot of the rendered output.
 
 ---
 
 ## 🌐 Multilingual Support
 
-The user interface is localised in **33 languages**, selectable at runtime and persisted via `localStorage`:
+The user interface is localised in **33 languages**, selectable at runtime. Every
+user-visible string — panel titles, tool hints, status and error messages, section
+list labels and the start-screen model cards — comes from the single dictionary in
+`translations.js`; a missing key falls back to English rather than showing the raw
+key. The available languages are:
 
 | Code | Language | Code | Language | Code | Language |
 |------|----------|------|----------|------|----------|
@@ -322,7 +327,7 @@ The user interface is localised in **33 languages**, selectable at runtime and p
 |-----------|------|
 | **HTML5 / CSS3 / JavaScript (ES6+)** | Core application architecture |
 | **HTML5 Canvas API** | Section drawing and stress visualisation |
-| **Three.js (WebGL)** | Interactive 3D member visualisation |
+| **Three.js r128 (WebGL)** | Interactive 3D member visualisation — bundled in `vendor/`, no CDN, so the PWA works offline |
 | **SVG** | Vector export of section drawings |
 | **Service Worker API** | Offline caching and PWA functionality |
 | **Web App Manifest** | Home screen installation support |
@@ -338,12 +343,19 @@ torsion/
 ├── manifest.json           # PWA manifest descriptor
 ├── sw.js                   # Service Worker (offline caching)
 │
-├── script.js               # Torsion computations, canvas drawing, UI logic
-├── script3d.js             # Three.js 3D visualisation and deformed shape
+├── calc.js                 # Pure computation core — no DOM access; computeSection() and the series solutions
+├── script.js               # Application state, preferences, tools, mouse/keyboard, result panel
+├── draw2d.js               # 2D canvas drawing: section, dimensions, stress map, stress diagrams
+├── io.js                   # Start screen presets, project files (v2.1 JSON), SVG export
+├── app-api.js              # TorsionApp: the explicit interface the 3D view reads from the 2D application
+├── script3d.js             # Three.js 3D visualisation and deformed shape; exposes window.View3D
+├── vendor/three.min.js     # Three.js r128 (MIT) — local copy, keeps the app offline-capable
 │
 ├── translations.js         # Localisation string repository (33 languages)
 │
 ├── style.css               # Base styles, themes (light / dark / blueprint)
+│
+├── tests/                  # Automated tests (Node.js, no dependencies) + headless-browser snapshot
 │
 ├── logo.svg                # Application logotype
 ├── icon.svg                # Source vector icon
@@ -351,6 +363,8 @@ torsion/
 ├── icon-192.png            # PWA icon (192 × 192 px)
 └── icon-512.png            # PWA icon (512 × 512 px)
 ```
+
+The scripts are plain `<script>` files loaded in a fixed order (`calc.js → script.js → draw2d.js → io.js → app-api.js → script3d.js`); there is no build step. The computation core is deliberately free of any DOM access, so the same functions that drive the interface can be loaded and tested in isolation. The 2D application and the 3D view talk to each other only through two small, written interfaces — `TorsionApp` in one direction, `View3D` in the other — so the 2D application keeps working even when WebGL is unavailable.
 
 ---
 
@@ -370,6 +384,22 @@ Navigate to `http://localhost:8000` in a web browser to launch the application. 
 
 ---
 
+## 🧪 Tests
+
+The test suite needs only Node.js — no packages to install:
+
+```bash
+node tests/run.js             # computation, architecture and application tests (~2 s)
+node tests/run.js --browser   # additionally compare against a headless-Chrome snapshot
+```
+
+- **`calc.test.js`** checks the mechanics against independent references: the Timoshenko/Roark coefficient tables, closed-form circular and Bredt–Batho results, equilibrium of composite shafts, and the warping function (Laplace equation, free-surface condition, and recovery of *I*<sub>t</sub> from ψ). Every invalid-geometry case is checked to be refused rather than answered with a wrong number.
+- **`structure.test.js`** guards the architecture: the computation core stays free of DOM access, the 2D/3D interfaces are respected in both directions, every script is in the offline cache, and all 33 languages carry exactly the same keys as English.
+- **`app.test.js`** runs the 2D application against a minimal fake DOM: project files round-trip, legacy files load, and the application runs without the 3D module.
+- **`browser/snapshot.js`** opens the real page in headless Chrome with WebGL and records, for eleven scenarios, the computed results, every panel value, a hash of the 2D canvas pixels, a hash of the SVG export and the geometry of every object in the 3D scene. Any refactoring that is meant to leave behaviour unchanged must reproduce this snapshot exactly.
+
+---
+
 ## 🚀 Start screen
 
 The application opens on a **model chooser**: start a new model, open a saved file, or pick one of the ready examples. The examples are chosen to show *different* things rather than different dimensions — the efficiency of a hollow shaft, the stress jump at a material interface in a composite, the case where τ<sub>max</sub> falls **inside** the section because the core is the stiffer material, and the rectangular family from a square to a 2:1 section (warping).
@@ -378,7 +408,7 @@ Each card's picture is an **SVG generated from the model itself**, so it cannot 
 
 ## 📖 Usage
 
-1. **Draw the cross-section** — Use the **Circle** tool for a solid shaft, or the **Ring** tool for a hollow shaft: click the centre, then one diameter, then the other — the ring is created in one go (press *Esc* to cancel a half-finished ring). Add further concentric rings for composite sections; they snap to the common centre automatically. For a **rectangular or square** shaft use the **Rectangle** tool (drag corner to corner, *Shift* for a square) — one rectangle per section, and it cannot be combined with circular parts.
+1. **Draw the cross-section** — Use the **Circle** tool for a solid shaft, or the **Ring** tool for a hollow shaft: click the centre, then one diameter, then the other — the ring is created in one go (press *Esc* to cancel a half-finished ring). Add further concentric rings for composite sections; they snap to the common centre automatically. For a **rectangular or square** shaft use the **Rectangle** tool (drag corner to corner, *Shift* for a square) — one rectangle per section, and it cannot be combined with circular parts. Sections built from several rectangular elements must not overlap: the torsion constant J = (1/3)Σb·t³ is summed per element, so an overlapping region would be counted twice — the calculation stops with an explicit message instead of returning a wrong stiffness.
 2. **Assign materials and dimensions** — In the *Kesitler* (Sections) list, set each part's shear modulus **G** (GPa). Dimensions can be edited numerically there as well: *r*<sub>d</sub> / *r*<sub>i</sub> for circular parts, *b* / *h* for a rectangle.
 3. **Apply the torque** — Enter the torsional moment **T** (kNm) or drag the slider beneath it; the section drawing, the results and the 3D deformed shape follow live (double-click the slider to return to zero). Negative values reverse the twist direction. Typing a value beyond the slider's range widens it.
 4. **Read the results** — τ<sub>max</sub> and τ<sub>min</sub> (or τ<sub>2</sub> for a rectangle) and the per-material interface stresses appear under *Kayma Gerilmeleri*; *I*<sub>p</sub> / *I*<sub>t</sub> and *W*<sub>t</sub> under the section-property panel; and Σ*G*·*I*<sub>p</sub> / *G*·*I*<sub>t</sub> with the rate of twist θ′ and the relative end rotation φ = θ′·*L* under *Deplasmanlar*. All of them update instantly. Set the bar length *L* there, and switch the angle unit between radians (default) and degrees.

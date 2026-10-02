@@ -19,7 +19,7 @@ gtag('config', 'G-72HVMM1696');
 <link rel="apple-touch-icon" href="./icon-192.png">
 <script src="./translations.js"></script>
 <!-- Three.js for 3D visualization -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="./vendor/three.min.js"></script>
 </head>
 
 <body>
@@ -31,6 +31,95 @@ gtag('config', 'G-72HVMM1696');
             <a href="../../">
                 <img src="./logo.svg" alt="vetin Logo" class="panel-logo">
             </a>
+            <!-- vetin uygulamaları arası geçiş. Adresler mutlaktır: sayfa nereden açılırsa
+                 açılsın (yerel kopya, PWA) yayındaki uygulamalara gider. -->
+            <button type="button" id="btnAppSwitcher" class="app-switcher-btn" data-i18n-title="appsMenu" title="vetin Uygulamaları" aria-haspopup="true" aria-expanded="false" aria-controls="appSwitcherMenu">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="4" y="4" width="4" height="4" rx="1"/><rect x="10" y="4" width="4" height="4" rx="1"/><rect x="16" y="4" width="4" height="4" rx="1"/>
+                    <rect x="4" y="10" width="4" height="4" rx="1"/><rect x="10" y="10" width="4" height="4" rx="1"/><rect x="16" y="10" width="4" height="4" rx="1"/>
+                    <rect x="4" y="16" width="4" height="4" rx="1"/><rect x="10" y="16" width="4" height="4" rx="1"/><rect x="16" y="16" width="4" height="4" rx="1"/>
+                </svg>
+            </button>
+            <div id="appSwitcherMenu" class="app-switcher-menu" role="menu">
+                <a href="https://www.rasimtemur.com/vetin/momentofinertia/" class="app-tile" role="menuitem">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M 4 5 H 20 M 12 5 V 19 M 4 19 H 20" stroke-width="1.5"/>
+                        <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                        <path d="M 8 12 H 16 M 12 8 V 16" stroke-width="0.5" stroke-dasharray="2 2"/>
+                    </svg>
+                    <span data-i18n="appMomentOfInertia">Atalet Momenti</span>
+                </a>
+                <a href="https://www.rasimtemur.com/vetin/beam/" class="app-tile" role="menuitem">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="14" width="20" height="3" fill="currentColor" fill-opacity="0.05"/>
+                        <path d="M 6 17 L 3.5 22 H 8.5 L 6 17 M 3 22 L 9 22"/>
+                        <path d="M 18 17 L 16 20 H 20 L 18 17"/>
+                        <circle cx="17" cy="21.5" r="1"/><circle cx="19" cy="21.5" r="1"/>
+                        <path d="M 6 8 H 18 M 6 8 V 14 M 9 8 V 14 M 12 8 V 14 M 15 8 V 14 M 18 8 V 14"/>
+                    </svg>
+                    <span data-i18n="appInternalForce">İç Kuvvetler</span>
+                </a>
+                <a href="https://www.rasimtemur.com/vetin/planestress/" class="app-tile" role="menuitem">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="7" y="7" width="10" height="10" rx="0.5" fill="currentColor" fill-opacity="0.05"/>
+                        <path d="M 12 7 V 2 M 12 17 V 22 M 10.5 3.5 L 12 2 L 13.5 3.5 M 10.5 20.5 L 12 22 L 13.5 20.5"/>
+                        <path d="M 17 12 H 22 M 7 12 H 2 M 20.5 10.5 L 22 12 L 20.5 13.5 M 3.5 10.5 L 2 12 L 3.5 13.5"/>
+                        <path d="M 8 5 H 16 M 14.5 3.5 L 16 5 L 14.5 6.5 M 19 16 V 8 M 20.5 9.5 L 19 8 L 17.5 9.5"/>
+                        <path d="M 16 19 H 8 M 9.5 20.5 L 8 19 L 9.5 17.5 M 5 8 V 16 M 3.5 14.5 L 5 16 L 6.5 14.5"/>
+                    </svg>
+                    <span data-i18n="appPlaneStress">Düzlem Gerilme</span>
+                </a>
+                <a href="https://www.rasimtemur.com/vetin/planestrain/" class="app-tile" role="menuitem">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="7" y="7" width="10" height="10" rx="0.5" stroke-dasharray="3 3" stroke-opacity="0.5"/>
+                        <path d="M 7 17 L 11 7 L 21 7 L 17 17 Z" stroke-width="1.2" fill="currentColor" fill-opacity="0.05"/>
+                        <path d="M 11 4 H 21 M 19 2.5 L 21 4 L 19 5.5"/>
+                        <path d="M 17 20 H 7 M 9 18.5 L 7 20 L 9 21.5"/>
+                    </svg>
+                    <span data-i18n="appPlaneStrain">Düzlem Gerinim</span>
+                </a>
+                <a href="https://www.rasimtemur.com/vetin/bending/" class="app-tile" role="menuitem">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M 3.6 10.1 A 20 20 0 0 0 20.4 10.1 L 22.1 13.8 A 24 24 0 0 1 1.9 13.8 Z" stroke-width="1.2"/>
+                        <path d="M 0.5 12 Q 0 6.5 6 6.5 M 3.5 5 L 6 6.5 L 3.5 8" stroke-width="1.2"/>
+                        <path d="M 23.5 12 Q 24 6.5 18 6.5 M 20.5 5 L 18 6.5 L 20.5 8" stroke-width="1.2"/>
+                    </svg>
+                    <span data-i18n="appBending">Basit Eğilme</span>
+                </a>
+                <a href="https://www.rasimtemur.com/vetin/eccentricity/" class="app-tile" role="menuitem">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="8" y="4" width="8" height="16" rx="1" stroke-width="1.2" fill="currentColor" fill-opacity="0.05"/>
+                        <path d="M 12 2 V 22" stroke-dasharray="3 3" stroke-opacity="0.5"/>
+                        <circle cx="14" cy="12" r="1" fill="currentColor"/>
+                        <path d="M 14 12 L 18 12" stroke-dasharray="1 1"/>
+                    </svg>
+                    <span data-i18n="appEccentricity">Dış Merkezlik</span>
+                </a>
+                <a href="https://www.rasimtemur.com/vetin/shear/" class="app-tile" role="menuitem">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M 2 4 H 10 V 6 H 7 V 16 H 10 V 18 H 2 V 16 H 5 V 6 H 2 Z" stroke-width="1.2" fill="currentColor" fill-opacity="0.05"/>
+                        <path d="M 1 11 H 22" stroke-dasharray="3 3" stroke-opacity="0.5"/>
+                        <path d="M 12 4 L 13 6 L 15.5 6 Q 20 11 15.5 16 L 13 16 L 12 18" stroke-width="1.2" fill="currentColor" fill-opacity="0.05"/>
+                        <path d="M 12 4 V 18"/>
+                    </svg>
+                    <span data-i18n="appShear">Kesmeli Eğilme</span>
+                </a>
+                <!-- Bulunulan uygulama: bağlantı değil, yalnız işaret -->
+                <span class="app-tile current" role="menuitem" aria-current="page">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M 4 9 H 16 M 4 15 H 16" stroke-width="1.2"/>
+                        <ellipse cx="4" cy="12" rx="1.5" ry="3" stroke-width="1.2" fill="currentColor" fill-opacity="0.05"/>
+                        <ellipse cx="16" cy="12" rx="1.5" ry="3" stroke-width="1.2" fill="currentColor" fill-opacity="0.05"/>
+                        <path d="M 7 9.3 Q 10 12 13 14.7" stroke-dasharray="1.5 1.5" stroke-opacity="0.6"/>
+                        <path d="M 19.5 7 A 3.5 5.5 0 0 1 19.5 17 M 17.6 17.6 L 19.5 17 L 19.2 15.1" stroke-width="1.2"/>
+                    </svg>
+                    <span data-i18n="appTorsion">Burulma</span>
+                </span>
+                <a href="https://www.rasimtemur.com/vetin/atlas/" class="app-tile" role="menuitem">
+                    <span class="app-tile-wordmark">ATLAS</span>
+                    <span>Atlas</span>
+                </a>
+            </div>
         </div>
 
         <div class="panel-content">
@@ -71,7 +160,7 @@ gtag('config', 'G-72HVMM1696');
             </div>
 
             <div class="toggle-row">
-                <span class="toggle-label">Gerilme Haritası</span>
+                <span class="toggle-label" data-i18n="showStressMap">Gerilme Haritası</span>
                 <label class="toggle-switch">
                     <input type="checkbox" id="cbStressMap">
                     <span class="slider"></span>
@@ -83,7 +172,7 @@ gtag('config', 'G-72HVMM1696');
                  biçimi okunur), sabit ölçekte gerilmenin mutlak şiddetini gösterir. -->
             <div id="stressScaleRow" style="display: none;">
                 <div class="toggle-row toggle-row-stacked">
-                    <span class="toggle-label">Renk Ölçeği</span>
+                    <span class="toggle-label" data-i18n="stressScaleTitle">Renk Ölçeği</span>
                     <div class="seg-group">
                         <button type="button" class="seg-btn active" data-stress-scale="auto">Otomatik</button>
                         <button type="button" class="seg-btn" data-stress-scale="fixed">Sabit</button>
@@ -91,14 +180,14 @@ gtag('config', 'G-72HVMM1696');
                 </div>
                 <div class="input-row single-col" id="stressRefRow" style="display: none;">
                     <div class="input-group">
-                        <span class="text-label">Üst sınır <span class="label-sym">τ</span></span>
+                        <span class="text-label" data-i18n="stressRefLabel">Üst sınır <span class="label-sym">τ</span></span>
                         <input type="number" id="tbStressRef" value="100" min="0" step="10">
                         <span class="unit-input">MPa</span>
                     </div>
                 </div>
                 <div class="input-row single-col">
                     <div class="input-group">
-                        <span class="text-label">Renk dağılımı <span class="label-sym">γ</span></span>
+                        <span class="text-label" data-i18n="stressGammaLabel">Renk dağılımı <span class="label-sym">γ</span></span>
                         <input type="number" id="tbStressGamma" value="1" min="0.2" max="5" step="0.1">
                         <span class="unit-input">—</span>
                     </div>
@@ -128,7 +217,7 @@ gtag('config', 'G-72HVMM1696');
             </div>
 
             <div class="toggle-row" id="forceVectorRow">
-                <span class="toggle-label">Burulma Momenti</span>
+                <span class="toggle-label" data-i18n="showTorsionMoment">Burulma Momenti</span>
                 <label class="toggle-switch">
                     <input type="checkbox" id="cbForceVector" checked>
                     <span class="slider"></span>
@@ -164,7 +253,7 @@ gtag('config', 'G-72HVMM1696');
             </div>
             <div class="input-row single-col">
                 <div class="input-group">
-                    <span class="text-label">Opaklık</span>
+                    <span class="text-label" data-i18n="opacity3D">Opaklık</span>
                     <input type="range" id="tbOpacity" min="10" max="100" value="90">
                     <span id="lblOpacityVal" class="unit-input">90%</span>
                 </div>
@@ -185,7 +274,7 @@ gtag('config', 'G-72HVMM1696');
             </div>
 
             <div class="toggle-row">
-                <span class="toggle-label">Enine Çizgiler</span>
+                <span class="toggle-label" data-i18n="showTransverse">Enine Çizgiler</span>
                 <label class="toggle-switch">
                     <input type="checkbox" id="cb3DTransverse" checked>
                     <span class="slider"></span>
@@ -193,7 +282,7 @@ gtag('config', 'G-72HVMM1696');
             </div>
 
             <div class="toggle-row">
-                <span class="toggle-label">Şekil Değiştirme</span>
+                <span class="toggle-label" data-i18n="showDeformed">Şekil Değiştirme</span>
                 <label class="toggle-switch">
                     <input type="checkbox" id="cb3DDeformed" checked>
                     <span class="slider"></span>
@@ -201,14 +290,14 @@ gtag('config', 'G-72HVMM1696');
             </div>
             <div class="input-row single-col">
                 <div class="input-group">
-                    <span class="text-label">Büyütme</span>
+                    <span class="text-label" data-i18n="deformScaleLabel">Büyütme</span>
                     <input type="number" id="tbDeformScale" value="0" min="0" step="100">
                     <span class="unit-input" id="lbl3DDeformScale">× oto</span>
                 </div>
             </div>
             <div class="input-row single-col">
                 <div class="input-group readonly">
-                    <span class="text-label">Uç dönmesi</span>
+                    <span class="text-label" data-i18n="endTwistLabel">Uç dönmesi</span>
                     <span class="value-readonly" id="val3DTwist">0.0000</span>
                     <span class="unit-input" id="unit3DTwist">rad</span>
                 </div>
@@ -217,7 +306,7 @@ gtag('config', 'G-72HVMM1696');
             <!-- Çarpılma: yalnız dikdörtgen kesitte anlamlıdır (dairede ψ ≡ 0) -->
             <div id="warp3DControls">
                 <div class="toggle-row">
-                    <span class="toggle-label">Çarpılma</span>
+                    <span class="toggle-label" data-i18n="showWarpLabel">Çarpılma</span>
                     <label class="toggle-switch">
                         <input type="checkbox" id="cb3DWarp" checked>
                         <span class="slider"></span>
@@ -225,20 +314,20 @@ gtag('config', 'G-72HVMM1696');
                 </div>
                 <div class="input-row single-col">
                     <div class="input-group">
-                        <span class="text-label">Çarpılma büyütme</span>
+                        <span class="text-label" data-i18n="warpScaleLabel">Çarpılma büyütme</span>
                         <input type="number" id="tbWarpScale" value="0" min="0" step="100">
                         <span class="unit-input" id="lbl3DWarpScale">× oto</span>
                     </div>
                 </div>
                 <div class="input-row single-col">
                     <div class="input-group readonly">
-                        <span class="text-label">w<span class="sub">max</span> (gerçek)</span>
+                        <span class="text-label" data-i18n="warpMaxLabel">w<span class="sub">max</span> (gerçek)</span>
                         <span class="value-readonly" id="val3DWarp">0.0000</span>
                         <span class="unit-input">mm</span>
                     </div>
                 </div>
             </div>
-            <div class="panel-hint" id="warp3DHint" style="display: none;">
+            <div class="panel-hint" id="warp3DHint" data-i18n="warpNote" style="display: none;">
                 Dairesel ve halka kesit burulmada düzlem kalır: çarpılma yoktur (ψ ≡ 0).
             </div>
         </div>
@@ -286,6 +375,31 @@ gtag('config', 'G-72HVMM1696');
                                 </button>
                             </div>
                         </div>
+                        <div class="settings-menu-divider"></div>
+
+                        <!-- Dosya işlemleri. Eskiden 2B tuvalin araç çubuğundaydı; ID'ler
+                             korunuyor, dinleyiciler (script.js) aynı düğmeleri buluyor. -->
+                        <span class="settings-menu-caption" data-i18n="filePanelTitle">Dosya</span>
+                        <button id="btnSideOpen" class="settings-menu-item">
+                            <svg viewBox="0 0 24 24" style="width: 16px; height: 16px;">
+                                <path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z" fill="currentColor"/>
+                            </svg>
+                            <span data-i18n="openProject">Dosya Aç</span>
+                        </button>
+                        <button id="btnSideSave" class="settings-menu-item">
+                            <svg viewBox="0 0 24 24" style="width: 16px; height: 16px;">
+                                <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" fill="currentColor"/>
+                            </svg>
+                            <span data-i18n="saveProject">Dosyayı Kaydet</span>
+                        </button>
+                        <button id="btnExportSVG" class="settings-menu-item">
+                            <svg viewBox="0 0 24 24" style="width: 16px; height: 16px;">
+                                <path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"></path>
+                            </svg>
+                            <span data-i18n="saveSVG">SVG Kaydet (2B)</span>
+                        </button>
+
+                        <div class="settings-menu-divider"></div>
                         <button id="settings-about-left" class="settings-menu-item">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
                                 <circle cx="12" cy="12" r="10"></circle>
@@ -307,7 +421,7 @@ gtag('config', 'G-72HVMM1696');
             </a>
             <div class="footer-text-mini">
                 <p><strong data-bending-title="1">vetin : Burulma</strong></p>
-                <p>&copy; <span class="left-panel-year"></span> · <a href="https://www.rasimtemur.com" target="_blank" rel="noopener noreferrer">Rasim Temür</a> · <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer" data-i18n="mitLicense">MIT Lisansı</a> · <a href="https://github.com/rasimtemur/vetin-momentofinertia" target="_blank" rel="noopener noreferrer" class="github-link"><svg viewBox="0 0 24 24" style="width: 12px; height: 12px; fill: currentColor; margin-right: 2px;"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>GitHub</a></p>
+                <p>&copy; <span class="left-panel-year"></span> · <a href="https://www.rasimtemur.com" target="_blank" rel="noopener noreferrer">Rasim Temür</a> · <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer" data-i18n="mitLicense">MIT Lisansı</a> · <a href="https://github.com/rasimtemur/vetin-torsion" target="_blank" rel="noopener noreferrer" class="github-link"><svg viewBox="0 0 24 24" style="width: 12px; height: 12px; fill: currentColor; margin-right: 2px;"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>GitHub</a></p>
             </div>
         </div>
     </div>
@@ -328,7 +442,7 @@ gtag('config', 'G-72HVMM1696');
                         <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
                     </svg>
                 </button>
-                <button class="tool-btn-vertical" id="btnRing" title="Halka Kesit (3 tık: merkez, bir çap, diğer çap)">
+                <button class="tool-btn-vertical" id="btnRing" data-i18n-title="tipRingTool" title="Halka Kesit (3 tık: merkez, bir çap, diğer çap)">
                     <svg viewBox="0 0 24 24" width="20" height="20">
                         <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
                         <circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -337,7 +451,7 @@ gtag('config', 'G-72HVMM1696');
                 <!-- Profil tipi ARAÇ SEÇİMİNDE belirlenir: tip sağ paneldeki listeye
                      gömülü olduğunda kullanıcı hep I yerleştirdiğini sanıyordu. -->
                 <div class="tool-with-menu">
-                    <button class="tool-btn-vertical" id="btnProfile" title="İnce Cidarlı Profil — tipi seçmek için tıkla">
+                    <button class="tool-btn-vertical" id="btnProfile" data-i18n-title="tipProfileTool" title="İnce Cidarlı Profil — tipi seçmek için tıkla">
                         <svg viewBox="0 0 24 24" width="20" height="20">
                             <path d="M5 4h14v3h-5.5v10H19v3H5v-3h5.5V7H5z" fill="currentColor"/>
                         </svg>
@@ -345,7 +459,7 @@ gtag('config', 'G-72HVMM1696');
                     </button>
                     <div id="profileKindMenu" class="profile-kind-menu"></div>
                 </div>
-                <button class="tool-btn-vertical" id="btnRect" title="Dikdörtgen / Kare Kesit (köşeden köşeye sürükleyin, Shift: kare)">
+                <button class="tool-btn-vertical" id="btnRect" data-i18n-title="tipRectTool" title="Dikdörtgen / Kare Kesit (köşeden köşeye sürükleyin, Shift: kare)">
                     <svg viewBox="0 0 24 24" width="20" height="20">
                         <rect x="3" y="6" width="18" height="12" fill="none" stroke="currentColor" stroke-width="2"/>
                     </svg>
@@ -364,23 +478,6 @@ gtag('config', 'G-72HVMM1696');
                     </svg>
                 </button>
 
-                <!-- Dosya Bölümü -->
-                <span class="drawing-tools-title" data-i18n="filePanelTitle">Dosya</span>
-                <button class="tool-btn-vertical" id="btnSideOpen" data-i18n-title="openProject" title="Dosya Aç">
-                    <svg viewBox="0 0 24 24" width="20" height="20">
-                        <path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z" fill="currentColor"/>
-                    </svg>
-                </button>
-                <button class="tool-btn-vertical" id="btnSideSave" data-i18n-title="saveProject" title="Dosyayı Kaydet">
-                    <svg viewBox="0 0 24 24" width="20" height="20">
-                        <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" fill="currentColor"/>
-                    </svg>
-                </button>
-                <button class="tool-btn-vertical" id="btnExportSVG" data-i18n-title="saveSVG" title="SVG Olarak Kaydet">
-                    <svg viewBox="0 0 24 24" width="20" height="20">
-                        <path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"></path>
-                    </svg>
-                </button>
             </div>
 
             <!-- Canvas Kontrolleri -->
@@ -417,7 +514,7 @@ gtag('config', 'G-72HVMM1696');
             <!-- Küçük (PiP) durumdaki iki tuş: yalnız panel-3d-pip sınıfındayken görünür,
                  bkz. style.css. Normal görünüm tuşu mevcut tam ekran boyutunu açar. -->
             <div class="pip-3d-controls">
-                <button class="pip-3d-btn" id="btnPip3DRestore" title="Normal Görünüm">
+                <button class="pip-3d-btn" id="btnPip3DRestore" data-i18n-title="tipNormalView" title="Normal Görünüm">
                     <svg viewBox="0 0 24 24" width="14" height="14">
                         <path d="M19 11h-8v6h8v-6zm4-8H1c-.55 0-1 .45-1 1v16c0 .55.45 1 1 1h22c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zm-1 15H2V6h20v12z" fill="currentColor"/>
                     </svg>
@@ -433,23 +530,23 @@ gtag('config', 'G-72HVMM1696');
                 <!-- AutoCAD tarzı ViewCube: küpe tıklayınca o yüze döner, sürükleyince
                      kamerayı serbest döndürür. Küp doku/etiketleri script3d.js'te üretilir. -->
                 <div class="viewcube-nav">
-                    <canvas id="viewcubeCanvas" width="112" height="112" title="Sürükle: döndür · Tıkla: yüze bak"></canvas>
+                    <canvas id="viewcubeCanvas" width="112" height="112" data-i18n-title="tipViewCube" title="Sürükle: döndür · Tıkla: yüze bak"></canvas>
                     <div class="view-btns">
-                        <button class="view-btn" data-view="on" title="Ön Görünüm">ÖN</button>
-                        <button class="view-btn" data-view="arka" title="Arka Görünüm">ARKA</button>
-                        <button class="view-btn" data-view="sol" title="Sol Görünüm">SOL</button>
-                        <button class="view-btn" data-view="sag" title="Sağ Görünüm">SAĞ</button>
-                        <button class="view-btn" data-view="ust" title="Üst Görünüm">ÜST</button>
-                        <button class="view-btn" data-view="3b" title="İzometrik Görünüm">3B</button>
+                        <button class="view-btn" data-view="on" data-i18n-title="tipViewFront" title="Ön Görünüm" data-i18n="viewFront">ÖN</button>
+                        <button class="view-btn" data-view="arka" data-i18n-title="tipViewBack" title="Arka Görünüm" data-i18n="viewBack">ARKA</button>
+                        <button class="view-btn" data-view="sol" data-i18n-title="tipViewLeft" title="Sol Görünüm" data-i18n="viewLeft">SOL</button>
+                        <button class="view-btn" data-view="sag" data-i18n-title="tipViewRight" title="Sağ Görünüm" data-i18n="viewRight">SAĞ</button>
+                        <button class="view-btn" data-view="ust" data-i18n-title="tipViewTop" title="Üst Görünüm" data-i18n="viewTop">ÜST</button>
+                        <button class="view-btn" data-view="3b" data-i18n-title="tipViewIso" title="İzometrik Görünüm" data-i18n="viewIso">3B</button>
                     </div>
                 </div>
                 <div class="zoom-controls-3d">
                     <div class="zoom-row">
-                        <button class="zoom-btn-3d" id="btn3DZoomIn" title="Yakınlaştır">+</button>
-                        <button class="zoom-btn-3d" id="btn3DZoomOut" title="Uzaklaştır">−</button>
+                        <button class="zoom-btn-3d" id="btn3DZoomIn" data-i18n-title="tipZoomIn" title="Yakınlaştır">+</button>
+                        <button class="zoom-btn-3d" id="btn3DZoomOut" data-i18n-title="tipZoomOut" title="Uzaklaştır">−</button>
                     </div>
                     <div class="zoom-row">
-                        <button class="zoom-btn-3d" id="btn3DFitAll" title="Tümünü Sığdır">
+                        <button class="zoom-btn-3d" id="btn3DFitAll" data-i18n-title="tipFitAll" title="Tümünü Sığdır">
                             <svg viewBox="0 0 24 24" width="14" height="14">
                                 <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0013 3.06V1h-2v2.06A8.994 8.994 0 003.06 11H1v2h2.06A8.994 8.994 0 0011 20.94V23h2v-2.06A8.994 8.994 0 0020.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" fill="currentColor"/>
                             </svg>
@@ -461,7 +558,7 @@ gtag('config', 'G-72HVMM1696');
                         </button>
                         <!-- Tam görünümden küçük önizlemeye dönüş: PiP tuşuyla aynı simge
                              (bkz. btnPip3DRestore) — iki yönlü tek bir "PiP değiştir" simgesi -->
-                        <button class="zoom-btn-3d" id="btnEnterPip" title="Küçük Önizleme">
+                        <button class="zoom-btn-3d" id="btnEnterPip" data-i18n-title="tipPip" title="Küçük Önizleme">
                             <svg viewBox="0 0 24 24" width="14" height="14">
                                 <path d="M19 11h-8v6h8v-6zm4-8H1c-.55 0-1 .45-1 1v16c0 .55.45 1 1 1h22c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zm-1 15H2V6h20v12z" fill="currentColor"/>
                             </svg>
@@ -510,6 +607,9 @@ gtag('config', 'G-72HVMM1696');
         <div class="result-box">
             <span class="panel-title" data-i18n="inertiaResults">ATALET MOMENTLERİ</span>
             <div class="result-content">
+                <!-- Kesitin TOPLAM değerleri. Çok elemanlı kesitte gizlenir: yerini
+                     aşağıdaki eleman bazında liste alır (bkz. updateInertiaPartList) -->
+                <div id="inertiaTotalRows">
                 <div class="input-row single-col">
                     <div class="input-group readonly">
                         <span class="math-label">I<span class="sub">x</span></span>
@@ -531,22 +631,26 @@ gtag('config', 'G-72HVMM1696');
                         <span class="unit-input">mm⁴</span>
                     </div>
                 </div>
-                <!-- Kutupsal atalet momenti (Ip = Ix + Iy) yalnız dairesel/halka
-                     kesitte gösterilir: dikdörtgende bu değer burulmayı yönetmez,
-                     yerini It alır (bkz. burulma atalet momenti kutusu) -->
-                <div class="input-row single-col" id="rowIpPolar" style="display: none;">
+                <!-- Dairesel/halka kesitte kutupsal atalet momenti (Ip = Ix + Iy);
+                     dikdörtgen/profilde burulma atalet momenti It (orada Ip burulmayı
+                     yönetmez). Ayrı bir polar kutusu yoktur — It'nin tek yeri burası -->
+                <div class="input-row single-col" id="rowIpPolar">
                     <div class="input-group readonly">
-                        <span class="math-label">I<span class="sub">p</span></span>
+                        <span class="math-label" id="lblIpPolar">I<span class="sub">p</span></span>
                         <span class="value-readonly" id="valIpPolar">0.00</span>
                         <span class="unit-input">mm⁴</span>
                     </div>
                 </div>
+                </div>
+                <!-- Çok elemanlı kesitte her elemanın değerleri (ortak ağırlık
+                     merkezine göre), tek elemandaki satır biçimiyle -->
+                <div id="inertiaPartList" style="display:none;"></div>
             </div>
         </div>
 
         <!-- BURULMA MOMENTİ GİRİŞ KUTUSU -->
         <div class="result-box" id="torsionInputBox">
-            <span class="panel-title">BURULMA MOMENTİ</span>
+            <span class="panel-title" data-i18n="torsionMomentTitle">BURULMA MOMENTİ</span>
             <div class="result-content">
                 <div class="input-row single-col">
                     <div class="input-group">
@@ -558,7 +662,7 @@ gtag('config', 'G-72HVMM1696');
                 <div class="input-row single-col">
                     <div class="slider-row-compact">
                         <input type="range" id="tbTorsionSlider" min="-10" max="10" step="0.1" value="1.5"
-                               title="Burulma momentini sürükleyerek değiştirin">
+                               data-i18n-title="tipTorsionSlider" title="Burulma momentini sürükleyerek değiştirin">
                     </div>
                 </div>
             </div>
@@ -566,8 +670,12 @@ gtag('config', 'G-72HVMM1696');
 
         <!-- KAYMA GERİLMELERİ -->
         <div class="result-box" id="torsionResultsBox">
-            <span class="panel-title">KAYMA GERİLMELERİ</span>
+            <span class="panel-title" id="lblShearBoxTitle" data-i18n="shearStressTitle">KAYMA GERİLMELERİ</span>
             <div class="result-content">
+                <!-- Kesitin uç değerleri. Kompozit milde gizlenir, yerini eleman
+                     bazında moment payı T_i ve τ_iç/τ_dış alır, kutunun adı da "iç
+                     kuvvetler ve kayma gerilmeleri" olur (bkz. updateTauPartList) -->
+                <div id="tauTotalRows">
                 <div class="input-row single-col">
                     <div class="input-group readonly stress-max">
                         <span class="math-label">τ<span class="sub">max</span></span>
@@ -582,17 +690,14 @@ gtag('config', 'G-72HVMM1696');
                         <span class="unit-input">MPa</span>
                     </div>
                 </div>
-                <!-- Kompozit (çok malzemeli) kesitlerde malzeme bazında gerilmeler -->
-                <div id="torsionMaterialList" class="shapes-list-section" style="display:none;">
-                    <span class="sub-panel-title">Malzeme Bazında Gerilmeler</span>
-                    <div id="torsionMaterialRows" class="shapes-list-container"></div>
                 </div>
+                <div id="tauPartList" style="display:none;"></div>
             </div>
         </div>
 
         <!-- DEPLASMANLAR: burulma rijitliği, birim ve bağıl dönme açısı -->
         <div class="result-box" id="torsionRigidityBox">
-            <span class="panel-title">DEPLASMANLAR</span>
+            <span class="panel-title" data-i18n="displacementsTitle">DEPLASMANLAR</span>
             <div class="result-content">
                 <div class="input-row single-col">
                     <div class="input-group readonly">
@@ -605,52 +710,31 @@ gtag('config', 'G-72HVMM1696');
                      "Çubuk Boyu" ile aynı değerdir, iki alan karşılıklı eşlenir -->
                 <div class="input-row single-col">
                     <div class="input-group">
-                        <span class="text-label">Çubuk boyu <span class="label-sym">L</span></span>
+                        <span class="text-label" data-i18n="barLengthSymLabel">Çubuk boyu <span class="label-sym">L</span></span>
                         <input type="number" id="tbBarLengthMain" data-bar-length value="500" min="0" max="50000">
                         <span class="unit-input">mm</span>
                     </div>
                 </div>
                 <div class="input-row single-col">
                     <div class="input-group readonly">
-                        <span class="text-label">Birim dönme <span class="label-sym">θ′</span></span>
+                        <span class="text-label" data-i18n="unitTwistLabel">Birim dönme <span class="label-sym">θ′</span></span>
                         <span class="value-readonly" id="valTheta">0.00</span>
                         <span class="unit-input" id="unitTheta">rad/m</span>
                     </div>
                 </div>
                 <div class="input-row single-col">
                     <div class="input-group readonly">
-                        <span class="text-label">Bağıl dönme <span class="label-sym">φ</span></span>
+                        <span class="text-label" data-i18n="relativeTwistLabel">Bağıl dönme <span class="label-sym">φ</span></span>
                         <span class="value-readonly" id="valPhi">0.00</span>
                         <span class="unit-input" id="unitPhi">rad</span>
                     </div>
                 </div>
                 <!-- Varsayılan radyan: teorinin doğal birimi -->
                 <div class="toggle-row toggle-row-stacked angle-unit-row">
-                    <span class="toggle-label">Açı Birimi</span>
+                    <span class="toggle-label" data-i18n="angleUnitTitle">Açı Birimi</span>
                     <div class="seg-group">
-                        <button type="button" class="seg-btn active" data-angle-unit="rad">Radyan</button>
-                        <button type="button" class="seg-btn" data-angle-unit="deg">Derece</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- POLAR ATALET MOMENTİ -->
-        <div class="result-box" id="polarInertiaBox">
-            <span class="panel-title" id="lblPolarBoxTitle">POLAR ATALET MOMENTİ</span>
-            <div class="result-content">
-                <div class="input-row single-col">
-                    <div class="input-group readonly">
-                        <span class="math-label" id="lblIp">I<span class="sub">p</span></span>
-                        <span class="value-readonly" id="valIp">0.00</span>
-                        <span class="unit-input">mm⁴</span>
-                    </div>
-                </div>
-                <div class="input-row single-col">
-                    <div class="input-group readonly">
-                        <span class="math-label">W<span class="sub">t</span></span>
-                        <span class="value-readonly" id="valWt">0.00</span>
-                        <span class="unit-input">mm³</span>
+                        <button type="button" class="seg-btn active" data-angle-unit="rad" data-i18n="angleRadian">Radyan</button>
+                        <button type="button" class="seg-btn" data-angle-unit="deg" data-i18n="angleDegree">Derece</button>
                     </div>
                 </div>
             </div>
@@ -706,7 +790,11 @@ gtag('config', 'G-72HVMM1696');
         </div>
     </div>
 
+    <script src="./calc.js"></script>
     <script src="./script.js"></script>
+    <script src="./draw2d.js"></script>
+    <script src="./io.js"></script>
+    <script src="./app-api.js"></script>
     <script src="./script3d.js"></script>
     <script>
         document.querySelectorAll('.left-panel-year').forEach(el => { el.textContent = new Date().getFullYear(); });
@@ -730,7 +818,7 @@ gtag('config', 'G-72HVMM1696');
                             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                                 let notification = document.createElement('div');
                                 notification.className = 'update-notification';
-                                notification.innerHTML = '<span>Yeni güncelleme mevcut.</span> <button onclick="window.location.reload()">Yenile</button>';
+                                notification.innerHTML = '<span>' + t('updateAvailable') + '</span> <button onclick="window.location.reload()">' + t('updateReload') + '</button>';
                                 document.body.appendChild(notification);
                             }
                         });

@@ -1,10 +1,16 @@
-const CACHE_NAME = 'vetin-torsion-v2';
+const CACHE_NAME = 'vetin-torsion-v4';
 const ASSETS = [
     './index.html',
     './style.css',
+    './calc.js',
     './script.js',
+    './draw2d.js',
+    './io.js',
+    './app-api.js',
     './script3d.js',
     './translations.js',
+    './vendor/three.min.js',
+    './icon.svg',
     './logo.svg',
     './IUC.svg',
     './icon-192.png',
@@ -41,5 +47,6 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('message', (event) => {
-    if (event.data.action === 'skipWaiting') self.skipWaiting();
+    // event.data bos gelebilir (baska bir kaynaktan postMessage)
+    if (event.data && event.data.action === 'skipWaiting') self.skipWaiting();
 });

@@ -300,6 +300,87 @@ h3 {
     align-items: center;
     justify-content: center;
     background-color: #fafafa;
+    position: relative;
+}
+
+/* --- UYGULAMA DEĞİŞTİRİCİ (logonun sağ üst köşesi) ---
+   Menü sol panelin dışına, tuvalin üstüne taşar: #left-panel overflow:visible. */
+.app-switcher-btn {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    margin-top: -16px;
+    width: 32px;
+    height: 32px;
+    padding: 6px;
+    border: none;
+    border-radius: 4px; /* ayarlar düğmesiyle (#settings-menu-toggle-left) aynı */
+    background: transparent;
+    color: var(--fluent-neutral-foreground-hint);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+.app-switcher-btn svg { width: 20px; height: 20px; fill: currentColor; }
+.app-switcher-btn:hover,
+.app-switcher-btn[aria-expanded="true"] {
+    background-color: var(--fluent-neutral-fill-hover);
+    color: var(--fluent-neutral-foreground-rest);
+}
+.app-switcher-btn:focus-visible { outline: 2px solid var(--fluent-accent-fill-rest); outline-offset: 1px; }
+
+.app-switcher-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 8px;
+    width: 312px;
+    box-sizing: border-box;
+    display: none;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    padding: 12px;
+    background-color: var(--fluent-layer-fill-default);
+    border: 1px solid var(--fluent-stroke-color-default);
+    border-radius: 12px;
+    box-shadow: var(--fluent-shadow-depth-16);
+    z-index: 3000;
+    animation: settingsMenuFade 0.2s ease;
+}
+.app-switcher-menu.show { display: grid; }
+#left-panel.app-menu-open { z-index: 3000; }
+.app-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 4px;
+    border-radius: 8px;
+    color: var(--fluent-accent-fill-rest);
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+}
+.app-tile svg { width: 36px; height: 36px; }
+.app-tile span {
+    font-size: 12px;
+    line-height: 1.25;
+    text-align: center;
+    color: var(--fluent-neutral-foreground-rest);
+}
+.app-tile .app-tile-wordmark {
+    height: 36px;
+    display: flex;
+    align-items: center;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--fluent-neutral-foreground-hint);
+}
+.app-tile:hover, .app-tile:focus-visible { background-color: var(--fluent-neutral-fill-hover); outline: none; }
+.app-tile.current { background-color: var(--fluent-neutral-fill-rest); cursor: default; }
+@media (max-width: 640px) {
+    .app-switcher-menu { width: min(312px, calc(100vw - 32px)); }
 }
 
 .logo-container a {
@@ -1090,6 +1171,14 @@ canvas#mainCanvas {
     font-size: 11px;
     font-weight: 600;
     cursor: pointer;
+    transition: background-color 0.15s ease-out, color 0.15s ease-out;
+}
+
+/* Yalnız doğrudan çocuklar (dil düğmeleri ve "+"): ayarlar düğmesi ile menü öğeleri
+   iç içe bir kapta durur ve kendi hover kurallarını taşır. */
+.language-switcher > button:hover {
+    background-color: var(--fluent-neutral-fill-hover);
+    color: var(--fluent-neutral-foreground-rest);
 }
 
 .language-switcher button.active {
@@ -2477,46 +2566,29 @@ body.color-mode-3 .drawing-tools-title {
     border-color: rgba(255, 255, 255, 0.4);
 }
 
-/* Malzeme bazında gerilme satırları */
-.torsion-band-row {
-    gap: 8px;
-    justify-content: flex-start;
-    cursor: default;
-}
-
-.torsion-band-info {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.torsion-band-info .shape-name {
-    display: flex;
-    flex-wrap: wrap;
-    column-gap: 5px;
-    overflow: visible;
-}
-
-.torsion-band-info .shape-name > span {
-    white-space: nowrap;
-}
-
-.torsion-band-info .shape-area {
-    display: flex;
-    flex-wrap: wrap;
-    column-gap: 10px;
-    line-height: 1.4;
-}
-
-.torsion-band-info .shape-area > span {
-    white-space: nowrap;
-}
-
 /* Kesit Özellikleri panelindeki yatay çizgiyi kaldır */
 #shapesListSection {
     border-top: none;
     margin-top: 8px;
     padding-top: 0;
+}
+
+/* Tek elemanlı kesit: eleman kartı yok, yalnız düzenleme alanları (bkz.
+   updateShapesList). Temaların !important kuralları da aşılmalı. */
+#shapesListSection.single-part .sub-panel-title {
+    display: none;
+}
+
+#shapesListSection.single-part .shapes-list-container {
+    background: none !important;
+    border: none !important;
+    max-height: none;
+}
+
+#shapesListSection.single-part .shape-item {
+    padding: 0;
+    border-bottom: none !important;
+    background: none !important;
 }
 
 .btn-delete-shape {
@@ -2806,6 +2878,23 @@ body.color-mode-3 .popup-panel {
 /* Menü simgeleri metinle aynı güçte: soluk simge okunurluğu düşürüyordu */
 .settings-menu-item svg,
 .settings-submenu-item svg { flex-shrink: 0; }
+/* Menü içi ayırıcı ve grup başlığı: dosya işlemleri tema/hakkında ile aynı
+   listede duruyor, gruplandırma olmadan üçü öbürlerine karışıyordu */
+.settings-menu-divider {
+    height: 1px;
+    background-color: var(--fluent-stroke-color-default);
+    margin: 4px 6px;
+    flex-shrink: 0;
+}
+.settings-menu-caption {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--fluent-neutral-foreground-hint);
+    padding: 2px 12px 4px;
+    user-select: none;
+}
 .settings-menu-item.has-submenu { position: relative; }
 .settings-submenu {
     position: absolute;
@@ -2939,4 +3028,14 @@ body.color-mode-3 .popup-panel {
     .ps-about-modal-grid { flex-direction: column; min-height: 0; }
     .ps-about-modal-left { padding: 24px; }
     .ps-about-modal-right { padding: 24px; }
+}
+
+/* Çok elemanlı kesitte atalet satırlarının eleman başlığı (renk + ad) */
+.inertia-part-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    margin-bottom: 4px;
+    text-transform: none;
 }

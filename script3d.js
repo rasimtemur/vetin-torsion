@@ -1,4 +1,10 @@
 // --- SCRIPT3D.JS : 3D VİZUALİZASYON ---
+//
+// Uygulamadan okunan her şey App (= TorsionApp, app-api.js) üzerinden gelir; bu
+// dosya 2B tarafın genel adlarına doğrudan dokunmaz. 2B tarafın buradan çağırdığı
+// her şey dosya sonundaki window.View3D'dedir. Ortak dış adlar yalnız THREE ve t().
+
+const App = TorsionApp;
 
 // === THREE.JS DEĞİŞKENLERİ ===
 let scene, camera, renderer;
@@ -83,29 +89,28 @@ const FIT_MARGIN = 1.06;      // rad (~0.006°): altında iki takım zaten üst 
 // derecenin binde biri); şekil değiştirme, sonlu eleman programlarındaki gibi
 // büyütülerek çizilir. Gerçek uç dönmesi panelde ayrıca yazılır.
 function torsionTwistRate() {
-    if (typeof calc === 'undefined' || !calc) return 0;
-    if (calc.errorState) return 0;
-    return calc.thetaPrime || 0;   // rad/mm
+    if (App.calc.errorState) return 0;
+    return App.calc.thetaPrime || 0;   // rad/mm
 }
 
 function getDeformScale() {
     deformScaleClamped = false;
 
     const rate = torsionTwistRate();
-    if (Math.abs(rate) * barLength < 1e-15) return 0;
+    if (Math.abs(rate) * App.barLength < 1e-15) return 0;
     if (deformScale > 0) return deformScale;
 
     // Burulma rijitliği: dairesel kesitte Σ(G·Ip), dikdörtgende G·It
-    const rigidity = (typeof calc !== 'undefined' && calc) ? calc.GIp : 0;
+    const rigidity = App.calc.GIp;
     if (!(rigidity > 0)) return 0;
 
     // Referans momentin (momentten bağımsız) ürettiği uç dönmesi
-    const refTwist = DEFORM_REF_TORQUE * barLength / rigidity;   // rad
+    const refTwist = DEFORM_REF_TORQUE * App.barLength / rigidity;   // rad
     if (refTwist < 1e-15) return 0;
     let k = (DEFORM_REF_DEG * Math.PI / 180) / refTwist;
 
     // Üst sınır: görünen dönme çok büyürse model okunmaz hâle gelir
-    const visible = Math.abs(rate) * barLength * k;
+    const visible = Math.abs(rate) * App.barLength * k;
     const maxVisible = DEFORM_MAX_DEG * Math.PI / 180;
     if (visible > maxVisible) {
         k *= maxVisible / visible;
@@ -187,8 +192,8 @@ function smoothGeometryNormals(geometry, creaseDeg) {
 // Momentten ve hesap hatasından bağımsızdır; arayüzün çarpılma bölümünü
 // açıp kapatmak için kullanılır.
 function sectionCanWarp() {
-    if (typeof rectangles === 'undefined' || rectangles.length !== 1) return false;
-    return typeof circles === 'undefined' || circles.length === 0;
+    if (App.rectangles.length !== 1) return false;
+    return App.circles.length === 0;
 }
 
 // Çarpılma hesabı için kesit ölçüleri; kesit çarpılmıyorsa null.
@@ -197,14 +202,13 @@ function sectionCanWarp() {
 // hem x hem y'de tek olduğundan çift ters çevirme ψ'yi değiştirmez.
 function warpSection() {
     if (!sectionCanWarp()) return null;
-    if (typeof calc === 'undefined' || !calc || calc.errorState) return null;
-    if (typeof rectWarpPsi !== 'function') return null;
+    if (App.calc.errorState) return null;
 
-    const r = rectangles[0];
+    const r = App.rectangles[0];
     const w = Math.abs(r.x2 - r.x1), h = Math.abs(r.y2 - r.y1);
     if (!(w > 0) || !(h > 0)) return null;
 
-    const cx = (calc.centroidX || 0), cy = (calc.centroidY || 0);
+    const cx = (App.calc.centroidX || 0), cy = (App.calc.centroidY || 0);
     return { w, h, x0: cx - (r.x1 + r.x2) / 2, y0: cy - (r.y1 + r.y2) / 2 };
 }
 
@@ -223,8 +227,8 @@ function warpPsiPeak(sec) {
         const x = -sec.w / 2 + sec.w * i / N;
         const y = -sec.h / 2 + sec.h * i / N;
         peak = Math.max(peak,
-            Math.abs(rectWarpPsi(x, sec.h / 2, sec.w, sec.h)),
-            Math.abs(rectWarpPsi(sec.w / 2, y, sec.w, sec.h)));
+            Math.abs(App.rectWarpPsi(x, sec.h / 2, sec.w, sec.h)),
+            Math.abs(App.rectWarpPsi(sec.w / 2, y, sec.w, sec.h)));
     }
     warpPeakCache = { w: sec.w, h: sec.h, peak };
     return peak;
@@ -239,7 +243,7 @@ function getWarpScale(sec) {
     if (!sec) return 0;
     if (warpScale > 0) return warpScale;
 
-    const rigidity = (typeof calc !== 'undefined' && calc) ? calc.GIp : 0;
+    const rigidity = App.calc.GIp;
     const peak = warpPsiPeak(sec);
     if (!(rigidity > 0) || !(peak > 0)) return 0;
 
@@ -280,7 +284,7 @@ function warpDisplacer() {
         const key = x + ',' + y;
         let dz = memo.get(key);
         if (dz === undefined) {
-            dz = amp * rectWarpPsi(x - x0, y - y0, w, h);
+            dz = amp * App.rectWarpPsi(x - x0, y - y0, w, h);
             memo.set(key, dz);
         }
         return dz;
@@ -359,7 +363,7 @@ function addTransverseRings(group, shape, material) {
     (extracted.holes || []).forEach(h => loops.push({ pts: h, scale: 0.997 }));
 
     for (let i = 0; i <= DEFORM_RINGS; i++) {
-        const z = barLength * i / DEFORM_RINGS;
+        const z = App.barLength * i / DEFORM_RINGS;
         const phi = k * rate * z;
         const c = Math.cos(phi), s = Math.sin(phi);
 
@@ -391,7 +395,7 @@ function addTwistReferenceLines(group, outlinePoints, colorHex) {
 
         const pts = [];
         for (let i = 0; i <= DEFORM_STEPS; i++) {
-            const z = barLength * i / DEFORM_STEPS;
+            const z = App.barLength * i / DEFORM_STEPS;
             const phi = k * rate * z;
             const c = Math.cos(phi), s = Math.sin(phi);
             pts.push(new THREE.Vector3(px * c - py * s, px * s + py * c, z + dz));
@@ -417,7 +421,7 @@ function addWarpFaces(group, sec, surfaceMaterial, lineMaterial, colorAt) {
     // Ağ çizgileri yüzeyle çakışıp z-fighting yapmasın diye çok az dışarı alınır
     const eps = 0.01 * Math.sqrt(sec.w * sec.h);
 
-    [{ z: 0, dir: -1 }, { z: barLength, dir: 1 }].forEach(face => {
+    [{ z: 0, dir: -1 }, { z: App.barLength, dir: 1 }].forEach(face => {
         const phi = twistRate * face.z;
         const c = Math.cos(phi), s = Math.sin(phi);
         const place = (x, y, out) => new THREE.Vector3(
@@ -479,8 +483,7 @@ function addWarpFaces(group, sec, surfaceMaterial, lineMaterial, colorAt) {
 function stressMapActive() {
     const cb = document.getElementById('cbStressMap');
     if (!cb || !cb.checked) return false;
-    if (typeof calc === 'undefined' || !calc || calc.errorState) return false;
-    return typeof sectionShearMagAt === 'function' && typeof stressColorRGB === 'function';
+    return !App.calc.errorState;
 }
 
 // Ölçek ve önbellek çizim başına bir kez kurulur. Dikdörtgende |τ| 100 terimli
@@ -489,8 +492,7 @@ function stressMapActive() {
 function makeStressColorizer() {
     // Aralık ve rampa eğrisi 2B ile TEK kaynaktan gelir (stressColorPos), yoksa
     // aynı kesit iki panelde farklı renklenirdi
-    const range = (typeof stressFieldRange === 'function')
-        ? stressFieldRange() : { vMin: 0, vMax: 0 };
+    const range = App.stressFieldRange();
     const cache = new Map();
 
     // Anahtar yuvarlanmış tam sayıdır; ağ on binlerce köşeye çıktığından
@@ -499,8 +501,8 @@ function makeStressColorizer() {
         const key = Math.round(x * 100) + ',' + Math.round(y * 100);
         let c = cache.get(key);
         if (!c) {
-            const v = sectionShearMagAt(x, y);
-            const rgb = stressColorRGB(stressColorPos(v, range));
+            const v = App.sectionShearMagAt(x, y);
+            const rgb = App.stressColorRGB(App.stressColorPos(v, range));
             c = [rgb[0] / 255, rgb[1] / 255, rgb[2] / 255];
             cache.set(key, c);
         }
@@ -526,32 +528,32 @@ function updateStress3DLegend() {
     const box = document.getElementById('stress3DLegend');
     if (!box) return;
 
-    const on = stressMapActive() && !(typeof sectionIsEmpty === 'function' && sectionIsEmpty());
+    const on = stressMapActive() && !App.sectionIsEmpty();
     box.style.display = on ? 'flex' : 'none';
     if (!on) return;
 
     // Alan tümüyle sıfırsa (moment yok) gövde tek renktir; ölçek de öyle olmalı.
     // Önbellek bu yüzden düz/renkli durumunu ANAHTAR olarak taşır — sabit bir
     // "boyandı" bayrağı olsaydı moment sıfırlandığında gökkuşağı asılı kalırdı.
-    const flat = (typeof stressFieldFlat === 'function') && stressFieldFlat();
-    const gam = (typeof stressGamma === 'number') ? stressGamma : 1;
+    const flat = App.stressFieldFlat();
+    const gam = App.stressGamma;
     const mod = flat ? 'flat' : ('ramp' + gam);
     const bar = document.getElementById('stress3DLegendBar');
     if (bar && bar.dataset.painted !== mod) {
         // Skala 2B ile birebir aynı duraklardan kurulur. Rampa eğriliyse durak
         // KONUMLARI kaydırılır: skalada s konumundaki renk, değer ekseninde
         // s^(1/γ) noktasına düşer (renk konumu = t^γ'nin tersi).
-        const stops = STRESS_COLORMAP.map(s =>
+        const stops = App.STRESS_COLORMAP.map(s =>
             'rgb(' + s[1] + ',' + s[2] + ',' + s[3] + ') ' +
             (Math.pow(s[0], 1 / gam) * 100).toFixed(1) + '%');
-        const zero = STRESS_COLORMAP[0];
+        const zero = App.STRESS_COLORMAP[0];
         bar.style.background = flat
             ? 'rgb(' + zero[1] + ',' + zero[2] + ',' + zero[3] + ')'
             : 'linear-gradient(to top, ' + stops.join(', ') + ')';
         bar.dataset.painted = mod;
     }
 
-    const { vMin, vMax } = stressFieldRange();
+    const { vMin, vMax } = App.stressFieldRange();
     const ticks = document.getElementById('stress3DLegendTicks');
     if (!ticks) return;
     ticks.innerHTML = '';
@@ -584,7 +586,7 @@ function addStressCapFaces(group, material, colorAt, nodes, quads) {
     const twistRate = deformationActive() ? getDeformScale() * torsionTwistRate() : 0;
     const warp = warpDisplacer();
 
-    [{ z: 0, dir: -1 }, { z: barLength, dir: 1 }].forEach(face => {
+    [{ z: 0, dir: -1 }, { z: App.barLength, dir: 1 }].forEach(face => {
         const phi = twistRate * face.z;
         const c = Math.cos(phi), s = Math.sin(phi);
 
@@ -655,9 +657,9 @@ function updateDeformReadouts() {
     const rate = torsionTwistRate();
     // Gerçek uç dönmesi = sağ paneldeki bağıl dönme açısı; birimi de ortaktır
     const twistEl = document.getElementById('val3DTwist');
-    if (twistEl) twistEl.textContent = formatAngle(rate * barLength * angleFactor());
+    if (twistEl) twistEl.textContent = App.formatAngle(rate * App.barLength * App.angleFactor());
     const twistUnitEl = document.getElementById('unit3DTwist');
-    if (twistUnitEl) twistUnitEl.textContent = angleUnitLabel();
+    if (twistUnitEl) twistUnitEl.textContent = App.angleUnitLabel();
 
     const scaleEl = document.getElementById('lbl3DDeformScale');
     if (scaleEl) {
@@ -666,8 +668,8 @@ function updateDeformReadouts() {
             scaleEl.textContent = '× —';
         } else {
             const num = k >= 100 ? Math.round(k) : k.toFixed(1);
-            scaleEl.textContent = (deformScale > 0 ? '×' : '× oto: ') + num +
-                (isDeformScaleClamped() ? ' (sınır)' : '');
+            scaleEl.textContent = (deformScale > 0 ? '×' : '× ' + t('autoScalePrefix') + ' ') + num +
+                (isDeformScaleClamped() ? ' (' + t('scaleClamped') + ')' : '');
         }
     }
 
@@ -703,8 +705,8 @@ function updateWarpReadouts() {
             scaleEl.textContent = '× —';
         } else {
             const num = k >= 100 ? Math.round(k) : k.toFixed(1);
-            scaleEl.textContent = (warpScale > 0 ? '×' : '× oto: ') + num +
-                (warpScaleClamped ? ' (sınır)' : '');
+            scaleEl.textContent = (warpScale > 0 ? '×' : '× ' + t('autoScalePrefix') + ' ') + num +
+                (warpScaleClamped ? ' (' + t('scaleClamped') + ')' : '');
         }
     }
 }
@@ -719,6 +721,21 @@ let animTarget = { theta: 0, phi: 0, dist: 0, tx: 0, ty: 0, tz: 0 };
 // === BAŞLATMA ===
 function init3D() {
     if (isInitialized) return;
+
+    // Three.js yoksa 3B kurulmaz. Kutuphane eskiden CDN'den geliyordu ve hicbir
+    // yerde varligi sinanmiyordu: erisilemeyen agda `new THREE.Scene()` bos bir
+    // panel ve konsol hatasi olarak sessizce oluyordu. Artik yerelde (vendor/)
+    // duruyor, yine de dosya eksikse kullaniciya ne oldugu soylenir.
+    if (typeof THREE === 'undefined') {
+        const hint = document.getElementById('three-container');
+        if (hint) {
+            hint.textContent = (typeof t === 'function') ? t('three3DMissing')
+                : '3D library could not be loaded.';
+            hint.style.padding = '1rem';
+        }
+        console.error('Vetin: three.js yuklenemedi (vendor/three.min.js).');
+        return;
+    }
 
     const canvas = document.getElementById('canvas3D');
     const container = document.getElementById('three-container');
@@ -758,7 +775,7 @@ function init3D() {
     scene.add(directionalLight2);
     
     // Uygulama başlangıcındaki tema ayarını yansıt
-    window.update3DTheme();
+    update3DTheme();
 
     // Eksen yardımcıları — konumları update3DBar'da uç kesite taşınır.
     // Renk düzeni: X lacivert, Y koyu yeşil, Z kırmızı (AxesHelper'ın kendi
@@ -813,13 +830,27 @@ function init3D() {
 // Renkler script.js'in tuval/malzeme paletiyle eşleşir: aynı kesit iki pencerede
 // aynı renkte görünmeli. Ozalit daha önce buraya hiç girmiyordu ("dark" değil
 // diye açık temaya düşüyor, mavi kâğıdın yanında beyaz bir 3B sahne çiziyordu).
+// Çubuk rengi enkesit paletinin İLK malzemesidir. Bu üç değer eskiden burada
+// tema başına ELLE kopyalanmış duruyordu ve senkronu yalnız bir yorum satırı
+// tutuyordu: script.js'teki paleti değiştiren biri 3B'yi sessizce ayırıyordu.
+// Artık tek kaynak MATERIAL_PALETTES.
+function paletteBarColors() {
+    const m = App.getMaterialColor(0);
+    return { bar: cssColorToHex(m.fill), edges: cssColorToHex(m.stroke) };
+}
+
+// '#RRGGBB' → 0xRRGGBB (THREE.Color sayı bekler)
+function cssColorToHex(c) {
+    const m = /^#([0-9a-f]{6})$/i.exec((c || '').trim());
+    return m ? parseInt(m[1], 16) : 0x808080;
+}
+
 function get3DColors() {
     const theme = document.documentElement.getAttribute('data-theme') || 'light';
     if (theme === 'dark') {
         return {
             background: 0x0F1419,
-            bar: 0x1E3A5F,      // Section fill (dark)
-            edges: 0x3B82F6,    // Section stroke (dark)
+            ...paletteBarColors(),
             ambient: 0x404040,
             ambientInt: 0.8,
             directional: 0xffffff,
@@ -832,8 +863,7 @@ function get3DColors() {
     } else if (theme === 'blueprint') {
         return {
             background: 0x0A1929,
-            bar: 0x10395F,      // Section fill (ozalit)
-            edges: 0x7EC8E3,    // Section stroke (ozalit)
+            ...paletteBarColors(),
             ambient: 0x506B85,
             ambientInt: 0.9,
             directional: 0xCFE6F5,
@@ -845,8 +875,7 @@ function get3DColors() {
     } else {
         return {
             background: 0xFFFFFF,   // 2B tuvalle aynı kâğıt (önce 0xfafafa idi)
-            bar: 0xD4E5EE,      // Section fill (light)
-            edges: 0x4E94B1,    // Section stroke (light)
+            ...paletteBarColors(),
             ambient: 0xffffff,
             ambientInt: 0.6,
             directional: 0xffffff,
@@ -884,7 +913,7 @@ function applyAxesColors(helper, gray) {
     cols.needsUpdate = true;
 }
 
-window.update3DTheme = function() {
+function update3DTheme() {
     if (!isInitialized || !scene) return;
     
     const colors = get3DColors();
@@ -909,7 +938,7 @@ window.update3DTheme = function() {
     // Koyu zeminlerde (koyu tema ve ozalit) eksenler parlak tonlara çekilir
     applyAxesColors(axesHelper, false);
     applyAxesColors(refAxesHelper, true);
-};
+}
 
 // === KAMERA POZİSYONU ===
 function updateCameraPosition() {
@@ -1043,8 +1072,9 @@ function buildViewCube() {
     // BoxGeometry yüz sırası: +x, -x, +y, -y, +z, -z (bkz. VIEW_DIRECTIONS)
     cubeMesh = new THREE.Mesh(
         new THREE.BoxGeometry(1.5, 1.5, 1.5),
-        [faceMaterial('ÖN'), faceMaterial('ARKA'), faceMaterial('ÜST', -Math.PI / 2),
-         faceMaterial('ALT', Math.PI / 2), faceMaterial('SOL'), faceMaterial('SAĞ')]
+        [faceMaterial(t('viewFront')), faceMaterial(t('viewBack')),
+         faceMaterial(t('viewTop'), -Math.PI / 2), faceMaterial(t('viewBottom'), Math.PI / 2),
+         faceMaterial(t('viewLeft')), faceMaterial(t('viewRight'))]
     );
     cubeScene.add(cubeMesh);
 
@@ -1329,13 +1359,9 @@ let lastBarGeometryKey = null;
 
 function barGeometryKey() {
     const parts = [];
-    if (typeof rectangles !== 'undefined') {
-        rectangles.forEach(r => parts.push('R', r.x1, r.y1, r.x2, r.y2));
-    }
-    if (typeof circles !== 'undefined') {
-        circles.forEach(c => parts.push('C', c.cx, c.cy, c.r, c.ri || 0));
-    }
-    parts.push('L', barLength);
+    App.rectangles.forEach(r => parts.push('R', r.x1, r.y1, r.x2, r.y2));
+    App.circles.forEach(c => parts.push('C', c.cx, c.cy, c.r, c.ri || 0));
+    parts.push('L', App.barLength);
     return parts.join(',');
 }
 
@@ -1347,72 +1373,64 @@ function disposeMaterial(material) {
     list.forEach(m => { if (m && m.dispose) m.dispose(); });
 }
 
+// Çubuğu baştan kurar. Adımlar ayrı fonksiyonlardadır ve SIRA önemlidir:
+//   1. disposeBarGroups     — önceki gruplar sahneden çıkar, GPU kaynakları bırakılır
+//   2. makeBarBuild         — ortak girdiler (extrude ayarı, renkler, malzemeler, harita)
+//   3. buildRectMember /    — her kesit elemanı: gövde → uç yüzey → kenar → enine
+//      buildCircleMember       halkalar → referans çizgileri (ekleme sırası sahne sırasıdır)
+//   4. placeBarGroups       — merkezleme, uç eksen takımları, sarmalayıcı gruplar
+//   5. fitCameraIfGeometryChanged
+// Her elemanda renk şekil değiştirmeden ÖNCE yazılır (konum taşınır, köşe sırası
+// değil) ve şekil değiştirmiş gövdede EdgesGeometry kullanılmaz (köşegenleri kenar sanar).
 function update3DBar() {
     if (!scene || !isInitialized) return;
 
-    // Eski mesh'leri kaldır
-    if (barGroup) {
-        scene.remove(barGroup);
-        barGroup.traverse((child) => {
-            if (child.geometry) child.geometry.dispose();
-            disposeMaterial(child.material);
-        });
-    }
-    if (edgesGroup) {
-        scene.remove(edgesGroup);
-        edgesGroup.traverse((child) => {
-            if (child.geometry) child.geometry.dispose();
-            disposeMaterial(child.material);
-        });
-    }
+    disposeBarGroups();
 
-    // Rectangles ve Circles kontrolü
-    const hasRectangles = typeof rectangles !== 'undefined' && rectangles.length > 0;
-    const hasCircles = typeof circles !== 'undefined' && circles.length > 0;
-
-    if (!hasRectangles && !hasCircles) {
+    if (App.rectangles.length === 0 && App.circles.length === 0) {
         updateDeformReadouts();
         return;
     }
 
     // Çubuk boyu (otomatik moddaysa kesitin 10 katı) script.js'te tazelenir
-    if (typeof syncBarLength === 'function') syncBarLength();
-
-    // Kesitin sınırlayıcı kutusu — kamera yerleşimi için
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    rectangles.forEach(r => {
-        if (r.x1 < minX) minX = r.x1;
-        if (r.x2 > maxX) maxX = r.x2;
-        if (r.y1 < minY) minY = r.y1;
-        if (r.y2 > maxY) maxY = r.y2;
-    });
-
-    if (hasCircles) {
-        circles.forEach(c => {
-            if (c.cx - c.r < minX) minX = c.cx - c.r;
-            if (c.cx + c.r > maxX) maxX = c.cx + c.r;
-            if (c.cy - c.r < minY) minY = c.cy - c.r;
-            if (c.cy + c.r > maxY) maxY = c.cy + c.r;
-        });
-    }
-
-    // Kesit boyutları
-    const sectionWidth = maxX - minX;
-    const sectionHeight = maxY - minY;
-
-    // Offset için centroid kullan
-
-    // Offset için centroid kullan
-    const cx = typeof calc !== 'undefined' ? calc.centroidX : 0;
-    const cy = typeof calc !== 'undefined' ? calc.centroidY : 0;
-
-
-
-    // Extrude ayarları — şekil değiştirme çizilecekse gövde boyunca bölünür
+    App.syncBarLength();
     updateDeformReadouts();
+
+    const build = makeBarBuild();
+    barGroup = new THREE.Group();
+    edgesGroup = new THREE.Group();
+
+    const warpSec = warpSection();
+    const warpOn = warpActive(warpSec);
+    App.rectangles.forEach((r, index) => buildRectMember(build, r, index, warpSec, warpOn));
+    App.circles.forEach((c, index) => buildCircleMember(build, c, index));
+
+    placeBarGroups();
+    fitCameraIfGeometryChanged();
+}
+
+function disposeGroup(group) {
+    if (!group) return;
+    scene.remove(group);
+    group.traverse((child) => {
+        if (child.geometry) child.geometry.dispose();
+        disposeMaterial(child.material);
+    });
+}
+
+function disposeBarGroups() {
+    disposeGroup(barGroup);
+    disposeGroup(edgesGroup);
+}
+
+// Bütün elemanların paylaştığı girdiler. Sahne kesitin AĞIRLIK MERKEZİNE göre
+// kurulur ve x/y ters çevrilir (yerel = merkez − grid); eleman fonksiyonları bu
+// dönüşümü build.cx / build.cy ile yapar.
+function makeBarBuild() {
+    // Şekil değiştirme çizilecekse gövde boyunca bölünür
     const extrudeSettings = {
         steps: deformationActive() ? DEFORM_STEPS : 1,
-        depth: barLength,
+        depth: App.barLength,
         bevelEnabled: false
     };
 
@@ -1438,385 +1456,184 @@ function update3DBar() {
         linewidth: 1
     });
 
-    // Gruplar oluştur
-    barGroup = new THREE.Group();
-    edgesGroup = new THREE.Group();
+    return {
+        cx: App.calc.centroidX, cy: App.calc.centroidY,
+        extrudeSettings, colors, stressColors, colorAt, material, edgesMaterial
+    };
+}
 
-    let renderSuccess = false;
+// Dikdörtgen eleman (tek dikdörtgen kesit ya da profil cidarı)
+function buildRectMember(build, r, index, warpSec, warpOn) {
+    const { cx, cy, stressColors, colorAt, material, edgesMaterial, colors } = build;
+    const shape = new THREE.Shape();
 
-    if (!renderSuccess) {
+    // X ve Y ters çevrilir (bkz. makeBarBuild)
+    const rawX1 = cx - r.x1;
+    const rawX2 = cx - r.x2;
+    const rx1 = Math.min(rawX1, rawX2);
+    const rx2 = Math.max(rawX1, rawX2);
+    const rawY1 = cy - r.y1;
+    const rawY2 = cy - r.y2;
+    const ry1 = Math.min(rawY1, rawY2); // Min Y (Bottom)
+    const ry2 = Math.max(rawY1, rawY2); // Max Y (Top)
 
-        // Helper: Check if circular hole intersects with rectangle
-        // This properly handles full, half, and quarter circles
-        function circleIntersectsRect(hole, rect) {
-            const hCx = hole.cx;
-            const hCy = hole.cy;
-            const hR = hole.r;
-            const subtype = hole.subtype || 'full';
-
-            const rx1 = Math.min(rect.x1, rect.x2);
-            const rx2 = Math.max(rect.x1, rect.x2);
-            const ry1 = Math.min(rect.y1, rect.y2);
-            const ry2 = Math.max(rect.y1, rect.y2);
-
-            // Calculate bounding box of the circle/wedge based on subtype
-            let hx1, hx2, hy1, hy2;
-
-            switch (subtype) {
-                case 'full':
-                    hx1 = hCx - hR;
-                    hx2 = hCx + hR;
-                    hy1 = hCy - hR;
-                    hy2 = hCy + hR;
-                    break;
-
-                case 'half-top':
-                    hx1 = hCx - hR;
-                    hx2 = hCx + hR;
-                    hy1 = hCy;        // Center (bottom of half)
-                    hy2 = hCy + hR;   // Top
-                    break;
-
-                case 'half-bottom':
-                    hx1 = hCx - hR;
-                    hx2 = hCx + hR;
-                    hy1 = hCy - hR;   // Bottom
-                    hy2 = hCy;        // Center (top of half)
-                    break;
-
-                case 'half-right':
-                    hx1 = hCx;        // Center (left of half)
-                    hx2 = hCx + hR;   // Right
-                    hy1 = hCy - hR;
-                    hy2 = hCy + hR;
-                    break;
-
-                case 'half-left':
-                    hx1 = hCx - hR;   // Left
-                    hx2 = hCx;        // Center (right of half)
-                    hy1 = hCy - hR;
-                    hy2 = hCy + hR;
-                    break;
-
-                case 'quarter-tr':  // Top-Right
-                    hx1 = hCx;        // Center (left)
-                    hx2 = hCx + hR;   // Right
-                    hy1 = hCy;        // Center (bottom)
-                    hy2 = hCy + hR;   // Top
-                    break;
-
-                case 'quarter-tl':  // Top-Left
-                    hx1 = hCx - hR;   // Left
-                    hx2 = hCx;        // Center (right)
-                    hy1 = hCy;        // Center (bottom)
-                    hy2 = hCy + hR;   // Top
-                    break;
-
-                case 'quarter-bl':  // Bottom-Left
-                    hx1 = hCx - hR;   // Left
-                    hx2 = hCx;        // Center (right)
-                    hy1 = hCy - hR;   // Bottom
-                    hy2 = hCy;        // Center (top)
-                    break;
-
-                case 'quarter-br':  // Bottom-Right
-                    hx1 = hCx;        // Center (left)
-                    hx2 = hCx + hR;   // Right
-                    hy1 = hCy - hR;   // Bottom
-                    hy2 = hCy;        // Center (top)
-                    break;
-
-                default:
-                    // Fallback to full circle
-                    hx1 = hCx - hR;
-                    hx2 = hCx + hR;
-                    hy1 = hCy - hR;
-                    hy2 = hCy + hR;
-            }
-
-            // Check if bounding boxes intersect
-            // Two rectangles intersect if they overlap in both x and y
-            const xOverlap = (hx1 <= rx2) && (hx2 >= rx1);
-            const yOverlap = (hy1 <= ry2) && (hy2 >= ry1);
-
-            return xOverlap && yOverlap;
+    // Dolu kontur CCW (kiralite korunur): sağ-alt → sağ-üst → sol-üst → sol-alt.
+    // Çarpılma çizilirken kenarlara ara nokta konur: yanal yüzeyin uç profili ψ
+    // ile eğrilir, dört köşeyle bu eğri düz çizgiye inerdi (ince ağlı uç yüzeyiyle
+    // kenarda açıklık kalırdı). Harita da bölünmüş kontur ister: bölünmemiş
+    // dikdörtgenin yanal yüzeyi yalnız dört köşeden geçer, dördünde de τ = 0'dır
+    const outlineSeg = (warpOn || stressColors) ? WARP_SEGMENTS : 1;
+    const corners = [[rx2, ry1], [rx2, ry2], [rx1, ry2], [rx1, ry1]];
+    shape.moveTo(corners[0][0], corners[0][1]);
+    for (let e = 0; e < corners.length; e++) {
+        const [ax, ay] = corners[e];
+        const [bx, by] = corners[(e + 1) % corners.length];
+        for (let i = 1; i <= outlineSeg; i++) {
+            shape.lineTo(ax + (bx - ax) * i / outlineSeg, ay + (by - ay) * i / outlineSeg);
         }
-
-        // Helper to create hole path
-        function createHolePath(h) {
-            const path = new THREE.Path();
-            // Subtype Inversion & X/Y Inversion
-            const localCx = (h.cx !== undefined ? cx - h.cx : cx - (h.x1 + h.x2) / 2);
-            const localCy = cy - (h.cy !== undefined ? h.cy : (h.y1 + h.y2) / 2);
-
-            if (h.type === 'rect') {
-                // Rectangle hole - CW winding
-                // Coord transformation with X/Y Inversion
-                const rawX1 = cx - h.x1;
-                const rawX2 = cx - h.x2;
-                const hx1 = Math.min(rawX1, rawX2);
-                const hx2 = Math.max(rawX1, rawX2);
-                const rawY1 = cy - h.y1;
-                const rawY2 = cy - h.y2;
-                const hy1 = Math.min(rawY1, rawY2);
-                const hy2 = Math.max(rawY1, rawY2);
-
-                // CW: Top-Left -> Top-Right -> Bottom-Right -> Bottom-Left -> Top-Left ??
-                // Standard Grid Y is UP.
-                // Screen Y is Down.
-
-                // In Three.js (standard cartesian):
-                // (hx1, hy2) Top-Left
-                // (hx2, hy2) Top-Right
-                // (hx2, hy1) Bottom-Right
-                // (hx1, hy1) Bottom-Left
-
-                // Hole must be CW (Chirality preserved)
-                // Top-Left -> Top-Right -> Bottom-Right -> Bottom-Left
-                path.moveTo(hx1, hy2);
-                path.lineTo(hx2, hy2);
-                path.lineTo(hx2, hy1);
-                path.lineTo(hx1, hy1);
-                path.lineTo(hx1, hy2);
-
-            } else {
-                // Circle hole
-                const subtype = h.subtype || 'full';
-                let start = 0, end = Math.PI * 2;
-
-                // Logic: Target Arc must be visually same, but drawn CW.
-                // Half-Top: Visual Top Semicircle. 
-                // CCW (Solid): 0 -> PI.
-                // CW (Hole): PI -> 0.
-
-                switch (subtype) {
-                    case 'half-top': start = Math.PI; end = 0; break;
-                    case 'half-bottom': start = 0; end = Math.PI; break; // Visual Bottom: 0 -> (-PI) or PI -> 2PI. CCW: PI->2PI. CW: 2PI->PI (0->PI CW goes thru bottom)
-                    // Wait. Absarc CW: Start -> End.
-                    // 0 -> PI CW: 0 -> Bottom -> PI. Correct.
-
-                    case 'half-right': start = Math.PI / 2; end = -Math.PI / 2; break; // Right side. CCW: -PI/2 -> PI/2. CW: PI/2 -> -PI/2.
-                    case 'half-left': start = -Math.PI / 2; end = Math.PI / 2; break; // Left side. CCW: PI/2 -> 3PI/2. CW: 3PI/2 -> PI/2.
-
-                    case 'quarter-tr': start = Math.PI / 2; end = 0; break; // CCW: 0->PI/2. CW: PI/2->0.
-                    case 'quarter-tl': start = Math.PI; end = Math.PI / 2; break; // CCW: PI/2->PI. CW: PI->PI/2.
-                    case 'quarter-bl': start = 3 * Math.PI / 2; end = Math.PI; break; // CCW: PI->3PI/2. CW: 3PI/2->PI.
-                    case 'quarter-br': start = 0; end = 3 * Math.PI / 2; break; // CCW: 3PI/2->2PI. CW: 2PI->3PI/2 (0 -> -PI/2).
-
-                    default: start = 0; end = Math.PI * 2; break;
-                }
-
-                if (subtype !== 'full') {
-                    path.moveTo(localCx, localCy);
-                }
-                // Hole CW (true)
-                path.absarc(localCx, localCy, h.r, start, end, true);
-                if (subtype !== 'full') {
-                    path.lineTo(localCx, localCy);
-                }
-            }
-            return path;
-        }
-
-        // Çarpılma ψ yalnız DOLU dikdörtgen için çözülmüştür; delik varsa çizilmez
-        const warpSec = warpSection();
-        const holesPresent = typeof holes !== 'undefined' && holes.length > 0;
-        const warpOn = warpActive(warpSec) && !holesPresent;
-
-        // Her dikdörtgen için
-        // Her dikdörtgen için
-        rectangles.forEach((r, index) => {
-            const shape = new THREE.Shape();
-
-            // X-Inversion
-            const rawX1 = cx - r.x1;
-            const rawX2 = cx - r.x2;
-            const rx1 = Math.min(rawX1, rawX2);
-            const rx2 = Math.max(rawX1, rawX2);
-
-            // Y-Inversion
-            const rawY1 = cy - r.y1;
-            const rawY2 = cy - r.y2;
-            const ry1 = Math.min(rawY1, rawY2); // Min Y (Bottom)
-            const ry2 = Math.max(rawY1, rawY2); // Max Y (Top)
-
-            // Solid must be CCW (Chirality preserved)
-            // Bottom-Right -> Top-Right -> Top-Left -> Bottom-Left (CCW)
-            // Çarpılma çizilirken kenarlara ara nokta konur: yanal yüzeyin uç
-            // profili ψ ile eğrilir, dört köşeyle bu eğri düz çizgiye inerdi
-            // (ince ağlı uç yüzeyiyle kenarda açıklık kalırdı).
-            // Harita da bölünmüş kontur ister: bölünmemiş dikdörtgenin yanal
-            // yüzeyi yalnız dört köşeden geçer, dördünde de τ = 0'dır
-            const outlineSeg = (warpOn || stressColors) ? WARP_SEGMENTS : 1;
-            const corners = [[rx2, ry1], [rx2, ry2], [rx1, ry2], [rx1, ry1]];
-            shape.moveTo(corners[0][0], corners[0][1]);
-            for (let e = 0; e < corners.length; e++) {
-                const [ax, ay] = corners[e];
-                const [bx, by] = corners[(e + 1) % corners.length];
-                for (let i = 1; i <= outlineSeg; i++) {
-                    shape.lineTo(ax + (bx - ax) * i / outlineSeg, ay + (by - ay) * i / outlineSeg);
-                }
-            }
-
-            // Holes for Rectangle
-            // Only add circle holes that actually intersect this rectangle
-            if (typeof holes !== 'undefined') {
-                holes.forEach(h => {
-                    if (h.type !== 'rect' && circleIntersectsRect(h, r)) {
-                        shape.holes.push(createHolePath(h));
-                    }
-                });
-            }
-
-            // Geometri oluştur
-            const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-            // Renkler şekil değiştirmeden ÖNCE: konum taşınır, köşe sırası değil
-            if (colorAt) applyStressColors(geometry, colorAt);
-            // Burulma şekil değiştirmesi (dönme + dikdörtgende çarpılma)
-            applyTorsionDeformation(geometry);
-
-            // Çarpılmış uç yüzeyi ayrıca çizilecekse ExtrudeGeometry'nin kaba
-            // kapağı gizlenir: kapak konturdan üretildiği için eyeri gösteremez.
-            // ExtrudeGeometry kapakları 0, yanal yüzeyi 1 numaralı gruba koyar;
-            // düzen beklenmedikse kapak olduğu gibi bırakılır.
-            const sideMaterial = material.clone();
-            let meshMaterial = sideMaterial;
-            const ownCap = warpOn || stressColors;
-            if (ownCap && geometry.groups.length === 2) {
-                const capMaterial = material.clone();
-                capMaterial.visible = false;
-                meshMaterial = [capMaterial, sideMaterial];
-            }
-
-            // Mesh oluştur
-            const mesh = new THREE.Mesh(geometry, meshMaterial);
-            barGroup.add(mesh);
-
-            // Çarpılmış uç kesitleri (yüzey + ağ çizgileri)
-            if (warpOn) {
-                addWarpFaces(barGroup, warpSec, material, edgesMaterial, colorAt);
-            } else if (stressColors) {
-                const cap = rectCapMesh(rx1, ry1, rx2, ry2);
-                addStressCapFaces(barGroup, material, colorAt, cap.nodes, cap.quads);
-            }
-
-            // Kenarlar: şekil değiştirmiş (burulmuş ya da çarpılmış) gövdede
-            // EdgesGeometry üçgen köşegenlerini kenar sandığından yalnızca
-            // gövde hiç bozulmamışken kullanılır
-            if ((showEdges || showWireframe) && !deformationActive() && !warpOn) {
-                const edgesGeometry = new THREE.EdgesGeometry(geometry, 15);
-                edgesGroup.add(new THREE.LineSegments(edgesGeometry, edgesMaterial.clone()));
-            }
-
-            // Enine kesit çizgileri (seçeneğe bağlı, momentten bağımsız)
-            addTransverseRings(edgesGroup, shape, edgesMaterial.clone());
-
-            // Burulma referans çizgileri yalnızca köşelerde (kenar ortalarındaki
-            // çizgiler kaldırıldı; enine kesit çizgileri zaten yüzeyi tarıyor)
-            addTwistReferenceLines(barGroup, [
-                { x: rx1, y: ry1 }, { x: rx2, y: ry1 }, { x: rx2, y: ry2 }, { x: rx1, y: ry2 }
-            ], colors.edges);
-        });
-
-        // Daireler (dolu daire / halka) — malzeme renkleriyle
-        if (hasCircles) {
-            circles.forEach((c, ci) => {
-                const shape = new THREE.Shape();
-                // X & Y Inversion
-                const localCx = cx - c.cx;
-                const localCy = cy - c.cy;
-                const r = c.r;
-
-                // Dış çember (dolu, CCW)
-                shape.moveTo(localCx + r, localCy);
-                shape.absarc(localCx, localCy, r, 0, Math.PI * 2, false);
-
-                // Halka: eş merkezli iç boşluk (CW yönlü delik yolu)
-                const ri = (typeof c.ri === 'number') ? c.ri : 0;
-                if (ri > 0 && ri < r) {
-                    const holePath = new THREE.Path();
-                    holePath.moveTo(localCx + ri, localCy);
-                    holePath.absarc(localCx, localCy, ri, 0, Math.PI * 2, true);
-                    shape.holes.push(holePath);
-                }
-
-                const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-                if (colorAt) applyStressColors(geometry, colorAt);
-                // Dairesel kesit burulmada çarpılmaz: yalnızca kesit dönmesi
-                applyTorsionDeformation(geometry);
-
-                // Malzeme rengi (script.js paletiyle aynı). Harita açıkken gövde
-                // rengi köşelerden gelir, yalnız kenar rengi malzemeden alınır.
-                let meshMaterial = material.clone();
-                const edgeMaterial = edgesMaterial.clone();
-                if (typeof window.getMaterialColor === 'function') {
-                    const idx = (typeof c.colorIdx === 'number') ? c.colorIdx : ci;
-                    const matCol = window.getMaterialColor(idx);
-                    if (!stressColors) meshMaterial.color = new THREE.Color(matCol.fill);
-                    edgeMaterial.color = new THREE.Color(matCol.stroke);
-                }
-
-                if (stressColors && geometry.groups.length === 2) {
-                    // Kapak konturdan üçgenlenir: bütün köşeler aynı yarıçapta
-                    // olduğundan kesit içindeki değişimi gösteremez → gizlenir
-                    const capMaterial = meshMaterial.clone();
-                    capMaterial.visible = false;
-                    meshMaterial = [capMaterial, meshMaterial];   // [kapak, yanal yüzey]
-                    const cap = circleCapMesh(localCx, localCy, ri > 0 && ri < r ? ri : 0, r);
-                    addStressCapFaces(barGroup, material, colorAt, cap.nodes, cap.quads);
-                }
-
-                const mesh = new THREE.Mesh(geometry, meshMaterial);
-                barGroup.add(mesh);
-
-                // Kenarlar yalnızca şekil değiştirme yokken (bkz. dikdörtgen dalı)
-                if ((showEdges || showWireframe) && !deformationActive()) {
-                    const edgesGeometry = new THREE.EdgesGeometry(geometry, 15);
-                    edgesGroup.add(new THREE.LineSegments(edgesGeometry, edgeMaterial));
-                }
-
-                // Enine kesit çizgileri (seçeneğe bağlı, momentten bağımsız)
-                addTransverseRings(edgesGroup, shape, edgeMaterial);
-
-                // Burulma referans çizgileri yalnızca en dıştaki (görünen) yüzeye
-                const isOutermost = circles.every(o => o.r <= c.r);
-                if (isOutermost) {
-                    const pts = [];
-                    for (let a = 0; a < 8; a++) {
-                        const ang = a * Math.PI / 4;
-                        pts.push({ x: localCx + r * Math.cos(ang), y: localCy + r * Math.sin(ang) });
-                    }
-                    const strokeCol = (typeof window.getMaterialColor === 'function')
-                        ? window.getMaterialColor((typeof c.colorIdx === 'number') ? c.colorIdx : ci).stroke
-                        : colors.edges;
-                    addTwistReferenceLines(barGroup, pts, strokeCol);
-                }
-            });
-        }
-
     }
 
-    // Bounding box hesapla ve merkeze al
+    const geometry = new THREE.ExtrudeGeometry(shape, build.extrudeSettings);
+    // Renkler şekil değiştirmeden ÖNCE: konum taşınır, köşe sırası değil
+    if (colorAt) applyStressColors(geometry, colorAt);
+    // Burulma şekil değiştirmesi (dönme + dikdörtgende çarpılma)
+    applyTorsionDeformation(geometry);
+
+    // Çarpılmış uç yüzeyi ayrıca çizilecekse ExtrudeGeometry'nin kaba kapağı
+    // gizlenir: kapak konturdan üretildiği için eyeri gösteremez. ExtrudeGeometry
+    // kapakları 0, yanal yüzeyi 1 numaralı gruba koyar; düzen beklenmedikse kapak
+    // olduğu gibi bırakılır.
+    const sideMaterial = material.clone();
+    // Elemanın kendi rengi (daire dalıyla aynı kural). Bu dal eskiden hep
+    // colors.bar kullanıyordu: colorSeq silmede geri sarmadığı için 2B'de mor
+    // çizilen bir dikdörtgen 3B'de mavi çıkabiliyordu.
+    const rectEdgeMaterial = edgesMaterial.clone();
+    const rc = App.getMaterialColor((typeof r.colorIdx === 'number') ? r.colorIdx : index);
+    if (!stressColors) sideMaterial.color = new THREE.Color(rc.fill);
+    rectEdgeMaterial.color = new THREE.Color(rc.stroke);
+    let meshMaterial = sideMaterial;
+    const ownCap = warpOn || stressColors;
+    if (ownCap && geometry.groups.length === 2) {
+        const capMaterial = material.clone();
+        capMaterial.visible = false;
+        meshMaterial = [capMaterial, sideMaterial];
+    }
+
+    barGroup.add(new THREE.Mesh(geometry, meshMaterial));
+
+    // Çarpılmış uç kesitleri (yüzey + ağ çizgileri)
+    if (warpOn) {
+        addWarpFaces(barGroup, warpSec, sideMaterial, rectEdgeMaterial, colorAt);
+    } else if (stressColors) {
+        const cap = rectCapMesh(rx1, ry1, rx2, ry2);
+        addStressCapFaces(barGroup, material, colorAt, cap.nodes, cap.quads);
+    }
+
+    // Kenarlar: şekil değiştirmiş (burulmuş ya da çarpılmış) gövdede EdgesGeometry
+    // üçgen köşegenlerini kenar sandığından yalnızca gövde hiç bozulmamışken kullanılır
+    if ((showEdges || showWireframe) && !deformationActive() && !warpOn) {
+        const edgesGeometry = new THREE.EdgesGeometry(geometry, 15);
+        edgesGroup.add(new THREE.LineSegments(edgesGeometry, rectEdgeMaterial.clone()));
+    }
+
+    // Enine kesit çizgileri (seçeneğe bağlı, momentten bağımsız)
+    addTransverseRings(edgesGroup, shape, rectEdgeMaterial.clone());
+
+    // Burulma referans çizgileri yalnızca köşelerde (kenar ortalarındaki çizgiler
+    // kaldırıldı; enine kesit çizgileri zaten yüzeyi tarıyor)
+    addTwistReferenceLines(barGroup, [
+        { x: rx1, y: ry1 }, { x: rx2, y: ry1 }, { x: rx2, y: ry2 }, { x: rx1, y: ry2 }
+    ], colors.edges);
+}
+
+// Dairesel eleman (dolu daire / halka) — malzeme renkleriyle. Dairesel kesit
+// burulmada çarpılmaz: yalnızca kesit dönmesi.
+function buildCircleMember(build, c, ci) {
+    const { cx, cy, stressColors, colorAt, material, edgesMaterial } = build;
+    const shape = new THREE.Shape();
+    // X ve Y ters çevrilir (bkz. makeBarBuild)
+    const localCx = cx - c.cx;
+    const localCy = cy - c.cy;
+    const r = c.r;
+
+    // Dış çember (dolu, CCW)
+    shape.moveTo(localCx + r, localCy);
+    shape.absarc(localCx, localCy, r, 0, Math.PI * 2, false);
+
+    // Halka: eş merkezli iç boşluk (CW yönlü delik yolu)
+    const ri = (typeof c.ri === 'number') ? c.ri : 0;
+    if (ri > 0 && ri < r) {
+        const holePath = new THREE.Path();
+        holePath.moveTo(localCx + ri, localCy);
+        holePath.absarc(localCx, localCy, ri, 0, Math.PI * 2, true);
+        shape.holes.push(holePath);
+    }
+
+    const geometry = new THREE.ExtrudeGeometry(shape, build.extrudeSettings);
+    if (colorAt) applyStressColors(geometry, colorAt);
+    applyTorsionDeformation(geometry);
+
+    // Malzeme rengi (2B paletiyle aynı). Harita açıkken gövde rengi köşelerden
+    // gelir, yalnız kenar rengi malzemeden alınır.
+    let meshMaterial = material.clone();
+    const edgeMaterial = edgesMaterial.clone();
+    const matCol = App.getMaterialColor((typeof c.colorIdx === 'number') ? c.colorIdx : ci);
+    if (!stressColors) meshMaterial.color = new THREE.Color(matCol.fill);
+    edgeMaterial.color = new THREE.Color(matCol.stroke);
+
+    if (stressColors && geometry.groups.length === 2) {
+        // Kapak konturdan üçgenlenir: bütün köşeler aynı yarıçapta olduğundan
+        // kesit içindeki değişimi gösteremez → gizlenir
+        const capMaterial = meshMaterial.clone();
+        capMaterial.visible = false;
+        meshMaterial = [capMaterial, meshMaterial];   // [kapak, yanal yüzey]
+        const cap = circleCapMesh(localCx, localCy, ri > 0 && ri < r ? ri : 0, r);
+        addStressCapFaces(barGroup, material, colorAt, cap.nodes, cap.quads);
+    }
+
+    barGroup.add(new THREE.Mesh(geometry, meshMaterial));
+
+    // Kenarlar yalnızca şekil değiştirme yokken (bkz. buildRectMember)
+    if ((showEdges || showWireframe) && !deformationActive()) {
+        const edgesGeometry = new THREE.EdgesGeometry(geometry, 15);
+        edgesGroup.add(new THREE.LineSegments(edgesGeometry, edgeMaterial));
+    }
+
+    // Enine kesit çizgileri (seçeneğe bağlı, momentten bağımsız)
+    addTransverseRings(edgesGroup, shape, edgeMaterial);
+
+    // Burulma referans çizgileri yalnızca en dıştaki (görünen) yüzeye
+    const isOutermost = App.circles.every(o => o.r <= c.r);
+    if (isOutermost) {
+        const pts = [];
+        for (let a = 0; a < 8; a++) {
+            const ang = a * Math.PI / 4;
+            pts.push({ x: localCx + r * Math.cos(ang), y: localCy + r * Math.sin(ang) });
+        }
+        addTwistReferenceLines(barGroup, pts, matCol.stroke);
+    }
+}
+
+// Çubuk sahnenin ortasına alınır; uç eksen takımları uç kesite yerleşir.
+function placeBarGroups() {
     const box = new THREE.Box3().setFromObject(barGroup);
     const center = new THREE.Vector3();
     box.getCenter(center);
 
-    // Grupları merkeze al ve döndür
     barGroup.position.set(-center.x, -center.y, -center.z);
     edgesGroup.position.set(-center.x, -center.y, -center.z);
 
-    // Update axes helper position to centroid at front face
-    // Bar is centered at (0,0,0), so local (0,0) centroid at front face (Z=barLength)
-    // is now at (-center.x, -center.y, barLength - center.z)
+    // Çubuk (0,0,0)'a ortalandığından uç kesitteki yerel (0,0) ağırlık merkezi
+    // (-center.x, -center.y, barLength - center.z) noktasındadır
     if (axesHelper) {
         // Enkesit düzleminden 0.5 birim (mm) öne al (çakışmayı önlemek için)
-        axesHelper.position.set(-center.x, -center.y, barLength - center.z + 0.5);
+        axesHelper.position.set(-center.x, -center.y, App.barLength - center.z + 0.5);
 
         // Uç kesit ne kadar döndüyse eksen takımı da o kadar döner. Bağıntı
         // çizilen şekil değiştirmeyle AYNI olmalı (bkz. applyTorsionDeformation):
         // φ(z) = k·θ′·z, uçta z = barLength.
         const endTwist = deformationActive()
-            ? getDeformScale() * torsionTwistRate() * barLength
+            ? getDeformScale() * torsionTwistRate() * App.barLength
             : 0;
         axesHelper.rotation.z = Math.PI + endTwist;
 
@@ -1828,23 +1645,23 @@ function update3DBar() {
         }
     }
 
-    // Wrapper gruplar oluştur (döndürme yok - çubuk mavi/Z ekseninde uzanır)
+    // Sarmalayıcı gruplar: çubuk döndürülmeden Z (mavi) ekseni boyunca uzanır
     const barWrapper = new THREE.Group();
     barWrapper.add(barGroup);
-    // Rotasyon kaldırıldı - çubuk artık Z (mavi) ekseni boyunca uzanır
     scene.add(barWrapper);
     barGroup = barWrapper;
 
     if (showEdges || showWireframe) {
         const edgesWrapper = new THREE.Group();
         edgesWrapper.add(edgesGroup);
-        // Rotasyon kaldırıldı
         scene.add(edgesWrapper);
         edgesGroup = edgesWrapper;
     }
+}
 
-    // Kamerayı yalnızca geometri değiştiyse yerleştir; moment değişiminde
-    // görüntü olduğu gibi kalır (bkz. barGeometryKey)
+// Kamerayı yalnızca geometri değiştiyse yerleştir; moment değişiminde görüntü
+// olduğu gibi kalır (bkz. barGeometryKey)
+function fitCameraIfGeometryChanged() {
     const geomKey = barGeometryKey();
     if (geomKey !== lastBarGeometryKey) {
         lastBarGeometryKey = geomKey;
@@ -2088,8 +1905,8 @@ let pendingInit3DTimeout = null;
 // yazar — erken ölçülürse kapanışta panel-3d hâlâ görünür olduğundan genişlik
 // yanlış çıkar.
 function sync2DLayout(refit) {
-    if (typeof resizeCanvas === 'function') resizeCanvas();
-    if (refit && typeof fitToScreen === 'function') fitToScreen();
+    App.resizeCanvas();
+    if (refit) App.fitToScreen();
 }
 
 // === 3D GÖRÜNÜM TOGGLE ===
@@ -2101,13 +1918,19 @@ function toggle3DView(enabled) {
 
     if (pendingInit3DTimeout) { clearTimeout(pendingInit3DTimeout); pendingInit3DTimeout = null; }
 
+    // #middle-area sınıfı da buradan yönetilir (eskiden script.js'in ayrı
+    // dinleyicisindeydi): düzen sınıfları ile panelin display'i aynı karede
+    // değişmezse tuval bayat bir bitmap genişliğiyle ölçülüyor.
+    const middleArea = document.getElementById('middle-area');
+    if (middleArea) middleArea.classList.toggle('view-3d-active', enabled);
+
     if (enabled) {
         document.body.classList.add('view-3d-active');
         panel3D.style.display = 'flex';
         section3DSettings.style.display = 'block';
 
-        if (typeof viewState !== 'undefined' && !saved2DViewState) {
-            saved2DViewState = { zoom: viewState.zoom, panX: viewState.panX, panY: viewState.panY };
+        if (!saved2DViewState) {
+            saved2DViewState = { zoom: App.viewState.zoom, panX: App.viewState.panX, panY: App.viewState.panY };
         }
 
         // Panel daraldı: tuvali hemen küçült ve kesiti yeni genişliğe sığdır
@@ -2134,21 +1957,31 @@ function toggle3DView(enabled) {
         panel3D.style.display = 'none';
         section3DSettings.style.display = 'none';
 
+        // Tam görünüm 2B paneli daraltmak için flex'e satır içi değer yazar;
+        // kapanışta temizlenmezse panel dar kalır (eski dinleyicinin işi).
+        const centerPanel = document.getElementById('center-panel');
+        if (centerPanel) centerPanel.style.flex = '';
+
         // viewState boyutlandırmadan ÖNCE geri yüklenir: resizeCanvas() kendi
         // içinde draw() çağırır, geri yükleme sonraya kalsaydı o çizim eski
         // (yarım panele sığdırılmış) değerlerle yapılırdı. fitToScreen() ile
         // tekrar sığdırmak yerine geri yükleniyor: kullanıcının kendi görünümü
         // bir düzen değişikliğiyle kaybolmamalı.
-        if (saved2DViewState && typeof viewState !== 'undefined') {
-            viewState.zoom = saved2DViewState.zoom;
-            viewState.panX = saved2DViewState.panX;
-            viewState.panY = saved2DViewState.panY;
+        if (saved2DViewState) {
+            App.viewState.zoom = saved2DViewState.zoom;
+            App.viewState.panX = saved2DViewState.panX;
+            App.viewState.panY = saved2DViewState.panY;
             saved2DViewState = null;
         }
 
         // Panel genişledi: tuvali hemen büyüt (sığdırma yok, görünüm korunuyor)
         sync2DLayout(false);
     }
+
+    // Düzen oturdu: 3B içeriği ve 2B çizimi bir kez tazele. sync2DLayout zaten
+    // resizeCanvas()'i (o da draw()'u) çağırdı; burada yalnız 3B tarafı kalır.
+    if (enabled && isInitialized) onResize3D();
+    update3DVisualization();
 }
 
 // === EVENT LİSTENERLAR ===
@@ -2376,16 +2209,28 @@ function setView(viewName) {
     if (dir) setViewDirection({ x: dir[0], y: dir[1], z: dir[2] });
 }
 
-// === GLOBAL FONKSİYON: script.js'den çağrılacak ===
+// === 2B TARAFLA SÖZLEŞME (View3D) ===
 // Kesit değiştiğinde 3D'yi güncelle. Tam görünüm KAPALIYKEN de PiP paneli açık
 // olabileceğinden (bkz. show3DPip), yalnız checkbox değil ikisi de sınanır —
 // yoksa PiP'teki model kesit değiştikçe güncellenmezdi.
-window.update3DVisualization = function () {
+function update3DVisualization() {
     const panel3D = document.getElementById('panel-3d');
     const active = document.getElementById('cb3DView')?.checked || panel3D?.classList.contains('panel-3d-pip');
     if (isInitialized && active) {
         update3DBar();
     }
-};
+}
 
-
+// 2B tarafın (script.js, draw2d.js, io.js) 3B'den çağırdığı HER ŞEY. Oradan
+// call3D('ad', ...) ile çağrılır: 3B modülü yüklenemese de (WebGL yok) 2B çalışır.
+// window'a yazılır ki varlığı TDZ'ye takılmadan sınanabilsin.
+window.View3D = Object.freeze({
+    update: update3DVisualization,      // kesit/moment değişti
+    updateTheme: update3DTheme,         // tema değişti
+    toggle: toggle3DView,               // tam görünüm aç/kapa (tek sahip, bkz. CLAUDE.md)
+    showPip: show3DPip,
+    hidePip: hide3DPip,
+    onResize: onResize3D,               // panel ayırıcısı sürüklendi
+    updateDeformReadouts,               // açı birimi değişti
+    updateStressLegend: updateStress3DLegend
+});
